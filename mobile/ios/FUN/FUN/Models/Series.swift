@@ -9,22 +9,47 @@ struct Series: Codable, Identifiable {
     let title: String
     let description: String
     let thumbnailUrl: String
-    let genre: String
-    let rating: Double?
-    let totalEpisodes: Int
-    let episodes: [Episode]?
+    let coverImageUrl: String
+    let genre: [String] // Changed to array for multiple genres
     let tags: [String]
-    let createdAt: String
+    let creatorId: String
+    let creator: Creator
+    let totalEpisodes: Int
+    let totalViews: Int
+    let totalLikes: Int
+    let totalComments: Int
+    let isActive: Bool
+    let isFeatured: Bool
+    let createdAt: Date
+    let episodes: [Episode]?
+    
+    // Legacy support
+    let rating: Double?
     let isLiked: Bool?
     let isFavorited: Bool?
-    let likeCount: Int?
+    
+    var stats: SeriesStats {
+        SeriesStats(
+            totalViews: totalViews,
+            totalLikes: totalLikes,
+            totalComments: totalComments
+        )
+    }
     
     enum CodingKeys: String, CodingKey {
         case id = "_id"
-        case title, description, thumbnailUrl, genre, rating
-        case totalEpisodes, episodes, tags, createdAt
-        case isLiked, isFavorited, likeCount
+        case title, description, thumbnailUrl, coverImageUrl
+        case genre, tags, creatorId, creator
+        case totalEpisodes, totalViews, totalLikes, totalComments
+        case isActive, isFeatured, createdAt, episodes
+        case rating, isLiked, isFavorited
     }
+}
+
+struct SeriesStats: Codable {
+    let totalViews: Int
+    let totalLikes: Int
+    let totalComments: Int
 }
 
 struct SeriesListResponse: Codable {

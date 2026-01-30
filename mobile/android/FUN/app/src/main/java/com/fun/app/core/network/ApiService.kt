@@ -42,13 +42,19 @@ interface ApiService {
     ): Response<FeedResponse>
 
     @GET("/series")
-    suspend fun getSeries(
+    suspend fun getSeries(): Response<SeriesListResponse>
+    
+    @GET("/series")
+    suspend fun getSeriesPaginated(
         @Query("page") page: Int,
         @Query("limit") limit: Int
     ): Response<SeriesListResponse>
 
     @GET("/series/{id}")
     suspend fun getSeriesDetail(@Path("id") id: String): Response<SeriesDetailResponse>
+    
+    @GET("/series/{id}/episodes")
+    suspend fun getSeriesEpisodes(@Path("id") seriesId: String): Response<EpisodesListResponse>
 
     @GET("/series/{id}/episodes/{num}")
     suspend fun getEpisode(

@@ -20,11 +20,11 @@ struct MainTabView: View {
                 }
                 .tag(0)
             
-            // Drama Tab
-            DramaView()
+            // Browse Tab
+            BrowseView()
                 .tabItem {
-                    Image(systemName: "play.square.stack.fill")
-                    Text("Drama")
+                    Image(systemName: "square.grid.2x2.fill")
+                    Text("Browse")
                 }
                 .tag(1)
             

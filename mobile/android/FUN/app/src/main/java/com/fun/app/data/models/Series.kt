@@ -13,15 +13,35 @@ data class Series(
     val title: String,
     val description: String,
     val thumbnailUrl: String,
-    val genre: String,
-    val rating: Double?,
-    val totalEpisodes: Int,
-    val episodes: List<Episode>?,
+    val coverImageUrl: String,
+    val genre: List<String>, // Changed to list for multiple genres
     val tags: List<String>,
-    val createdAt: String,
-    val isLiked: Boolean?,
-    val isFavorited: Boolean?,
-    val likeCount: Int?
+    val creatorId: String,
+    val creator: Creator,
+    val totalEpisodes: Int,
+    val stats: SeriesStats,
+    val isActive: Boolean,
+    val isFeatured: Boolean,
+    val createdAt: java.util.Date,
+    val episodes: List<Episode>?,
+    // Legacy support
+    val rating: Double? = null,
+    val isLiked: Boolean? = null,
+    val isFavorited: Boolean? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class Creator(
+    @Json(name = "_id") val id: String,
+    val displayName: String,
+    val profileImage: String
+)
+
+@JsonClass(generateAdapter = true)
+data class SeriesStats(
+    val totalViews: Int,
+    val totalLikes: Int,
+    val totalComments: Int
 )
 
 @JsonClass(generateAdapter = true)

@@ -17,8 +17,10 @@ enum APIEndpoint {
     
     // MARK: - Content Endpoints
     case feed(page: Int, limit: Int)
+    case getSeries
     case series(page: Int, limit: Int)
     case seriesDetail(id: String)
+    case getSeriesEpisodes(seriesId: String)
     case episode(seriesId: String, episodeNum: Int)
     case search(query: String, page: Int)
     case likeSeries(id: String)
@@ -58,10 +60,14 @@ enum APIEndpoint {
         // Content
         case .feed(let page, let limit):
             return "/feed?page=\(page)&limit=\(limit)"
+        case .getSeries:
+            return "/series"
         case .series(let page, let limit):
             return "/series?page=\(page)&limit=\(limit)"
         case .seriesDetail(let id):
             return "/series/\(id)"
+        case .getSeriesEpisodes(let seriesId):
+            return "/series/\(seriesId)/episodes"
         case .episode(let seriesId, let episodeNum):
             return "/series/\(seriesId)/episodes/\(episodeNum)"
         case .search(let query, let page):

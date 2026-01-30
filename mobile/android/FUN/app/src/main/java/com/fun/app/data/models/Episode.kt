@@ -10,18 +10,28 @@ import com.squareup.moshi.JsonClass
 @JsonClass(generateAdapter = true)
 data class Episode(
     @Json(name = "_id") val id: String,
-    val episodeNum: Int,
+    val seriesId: String,
+    val episodeNumber: Int, // New field
+    val episodeNum: Int? = null, // Legacy field
     val title: String,
     val description: String?,
     val thumbnailUrl: String,
-    val duration: Int,  // in seconds
     val videoUrl: String?,
-    val isFree: Boolean,
-    val unlockCostCredits: Int?,
-    val unlockCostUSD: Double?,
-    val premiumOnly: Boolean,
-    val tags: List<ProductTag>?,
-    val isUnlocked: Boolean?
+    val duration: Int,  // in seconds
+    val unlockMethod: UnlockMethod,
+    val creditsRequired: Int?,
+    val purchasePrice: Double?,
+    val isUnlocked: Boolean,
+    val viewCount: Int = 0,
+    val likeCount: Int = 0,
+    val commentCount: Int = 0,
+    val createdAt: java.util.Date,
+    // Legacy fields for backward compatibility
+    val isFree: Boolean? = null,
+    val unlockCostCredits: Int? = null,
+    val unlockCostUSD: Double? = null,
+    val premiumOnly: Boolean? = null,
+    val tags: List<ProductTag>? = null
 ) {
     val formattedDuration: String
         get() {
@@ -29,6 +39,13 @@ data class Episode(
             val seconds = duration % 60
             return String.format("%d:%02d", minutes, seconds)
         }
+}
+
+enum class UnlockMethod {
+    FREE,
+    CREDITS,
+    PURCHASE,
+    PREMIUM
 }
 
 @JsonClass(generateAdapter = true)
@@ -43,6 +60,11 @@ data class ProductTag(
 @JsonClass(generateAdapter = true)
 data class EpisodeResponse(
     val episode: Episode
+)
+
+@JsonClass(generateAdapter = true)
+data class EpisodesListResponse(
+    val episodes: List<Episode>
 )
 
 @JsonClass(generateAdapter = true)
