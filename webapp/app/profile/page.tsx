@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuthStore } from '@/store/auth-store';
 import { paymentAPI } from '@/lib/api-client';
 import { Transaction } from '@/types';
@@ -11,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Crown, Gift, LogOut, CreditCard, History } from 'lucide-react';
+import { Crown, Gift, LogOut, CreditCard, History, Home } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -21,8 +22,11 @@ export default function ProfilePage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // DEMO MODE: Skip auth check
+  const isDemoMode = true;
+
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isDemoMode && !isAuthenticated) {
       router.push('/login');
       return;
     }
@@ -32,6 +36,42 @@ export default function ProfilePage() {
   const loadTransactions = async () => {
     try {
       setIsLoading(true);
+      
+      // DEMO MODE: Use mock transactions
+      if (isDemoMode) {
+        const mockTransactions: Transaction[] = [
+          {
+            _id: '1',
+            type: 'credit_purchase',
+            amount: 9.99,
+            credits: 1000,
+            currency: 'USD',
+            status: 'completed',
+            createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+          },
+          {
+            _id: '2',
+            type: 'credit_spend',
+            amount: 0,
+            credits: 50,
+            currency: 'USD',
+            status: 'completed',
+            createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+          },
+          {
+            _id: '3',
+            type: 'subscription',
+            amount: 9.99,
+            currency: 'USD',
+            status: 'completed',
+            createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+          },
+        ];
+        setTransactions(mockTransactions);
+        setIsLoading(false);
+        return;
+      }
+      
       const response = await paymentAPI.get<{ transactions: Transaction[] }>('/transactions/history');
       setTransactions(response.transactions);
     } catch (error) {
@@ -57,7 +97,20 @@ export default function ProfilePage() {
     // In production, integrate Stripe subscriptions
   };
 
-  if (!user) {
+  // DEMO MODE: Use mock user
+  const demoUser = {
+    _id: 'demo-user',
+    email: 'demo@fun.app',
+    displayName: 'Demo User',
+    profileImage: 'https://api.dicebear.com/7.x/avataaars/svg?seed=demo',
+    credits: 850,
+    isPremium: false,
+    createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
+  };
+
+  const displayUser = isDemoMode ? demoUser : user;
+
+  if (!displayUser) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Skeleton className="h-96 w-full max-w-2xl" />
@@ -73,16 +126,16 @@ export default function ProfilePage() {
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={user.profileImage} />
+                <AvatarImage src={displayUser.profileImage} />
                 <AvatarFallback className="text-2xl">
-                  {user.displayName?.charAt(0) || user.email.charAt(0)}
+                  {displayUser.displayName?.charAt(0) || displayUser.email.charAt(0)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <h1 className="text-2xl font-bold">{user.displayName || 'User'}</h1>
-                <p className="text-muted-foreground">{user.email}</p>
+                <h1 className="text-2xl font-bold">{displayUser.displayName || 'User'}</h1>
+                <p className="text-muted-foreground">{displayUser.email}</p>
                 <div className="flex gap-2 mt-2">
-                  {user.isPremium && (
+                  {displayUser.isPremium && (
                     <Badge className="gap-1">
                       <Crown className="h-3 w-3" />
                       Premium
@@ -90,14 +143,22 @@ export default function ProfilePage() {
                   )}
                   <Badge variant="outline" className="gap-1">
                     <Gift className="h-3 w-3" />
-                    {user.credits} Credits
+                    {displayUser.credits} Credits
                   </Badge>
                 </div>
               </div>
-              <Button variant="outline" onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Logout
-              </Button>
+              <div className="flex gap-2">
+                <Link href="/">
+                  <Button variant="outline">
+                    <Home className="mr-2 h-4 w-4" />
+                    Home
+                  </Button>
+                </Link>
+                <Button variant="outline" onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  {isDemoMode ? 'Exit Demo' : 'Logout'}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

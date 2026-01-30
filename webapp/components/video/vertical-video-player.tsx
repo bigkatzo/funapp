@@ -32,6 +32,11 @@ export function VerticalVideoPlayer({
   const [isMuted, setIsMuted] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [showSeekAnimation, setShowSeekAnimation] = useState<'forward' | 'backward' | null>(null);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const lastTapRef = useRef<number>(0);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [isLongPressing, setIsLongPressing] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -127,10 +132,68 @@ export function VerticalVideoPlayer({
     }
   };
 
-  const handleVideoClick = () => {
-    togglePlay();
-    setShowControls(true);
-    setTimeout(() => setShowControls(false), 2000);
+  const handleTap = (e: React.MouseEvent<HTMLDivElement>) => {
+    const now = Date.now();
+    const timeSinceLastTap = now - lastTapRef.current;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const width = rect.width;
+    
+    // Double tap detection (within 300ms)
+    if (timeSinceLastTap < 300) {
+      // Double tap detected
+      const video = videoRef.current;
+      if (!video) return;
+      
+      if (x < width / 3) {
+        // Double tap left side - rewind 10s
+        video.currentTime = Math.max(0, video.currentTime - 10);
+        setShowSeekAnimation('backward');
+        setTimeout(() => setShowSeekAnimation(null), 500);
+      } else if (x > (width * 2) / 3) {
+        // Double tap right side - forward 10s
+        video.currentTime = Math.min(video.duration, video.currentTime + 10);
+        setShowSeekAnimation('forward');
+        setTimeout(() => setShowSeekAnimation(null), 500);
+      }
+      
+      lastTapRef.current = 0; // Reset to prevent triple tap
+    } else {
+      // Single tap - toggle play/pause
+      lastTapRef.current = now;
+      setTimeout(() => {
+        if (lastTapRef.current === now) {
+          // Confirmed single tap (no double tap followed)
+          togglePlay();
+          setShowControls(true);
+          setTimeout(() => setShowControls(false), 2000);
+        }
+      }, 300);
+    }
+  };
+
+  const handleTouchStart = () => {
+    // Long press detection
+    longPressTimerRef.current = setTimeout(() => {
+      setIsLongPressing(true);
+      setPlaybackSpeed(2);
+      const video = videoRef.current;
+      if (video) video.playbackRate = 2;
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    // Cancel long press
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    if (isLongPressing) {
+      setIsLongPressing(false);
+      setPlaybackSpeed(1);
+      const video = videoRef.current;
+      if (video) video.playbackRate = 1;
+    }
   };
 
   return (
@@ -140,8 +203,43 @@ export function VerticalVideoPlayer({
         ref={videoRef}
         className="absolute inset-0 w-full h-full object-contain"
         playsInline
-        onClick={handleVideoClick}
+        onClick={handleTap}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onMouseDown={handleTouchStart}
+        onMouseUp={handleTouchEnd}
+        onMouseLeave={handleTouchEnd}
       />
+
+      {/* Seek Animation Overlays */}
+      {showSeekAnimation === 'backward' && (
+        <div className="absolute left-0 top-0 bottom-0 w-1/3 flex items-center justify-center pointer-events-none">
+          <div className="bg-black/50 backdrop-blur-sm rounded-full p-6 animate-ping">
+            <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.333 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
+            </svg>
+          </div>
+        </div>
+      )}
+      
+      {showSeekAnimation === 'forward' && (
+        <div className="absolute right-0 top-0 bottom-0 w-1/3 flex items-center justify-center pointer-events-none">
+          <div className="bg-black/50 backdrop-blur-sm rounded-full p-6 animate-ping">
+            <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.933 12.8a1 1 0 000-1.6L6.6 7.2A1 1 0 005 8v8a1 1 0 001.6.8l5.333-4zM19.933 12.8a1 1 0 000-1.6l-5.333-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.333-4z" />
+            </svg>
+          </div>
+        </div>
+      )}
+
+      {/* Long Press Speed Indicator */}
+      {isLongPressing && (
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+          <div className="bg-black/70 backdrop-blur-md rounded-full px-6 py-3 text-white font-bold text-xl">
+            2x Speed
+          </div>
+        </div>
+      )}
 
       {/* Overlay Controls */}
       <div
@@ -156,21 +254,14 @@ export function VerticalVideoPlayer({
           <p className="text-white/80 text-sm line-clamp-2">{episode.description}</p>
         </div>
 
-        {/* Center Play/Pause */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-20 w-20 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30"
-            onClick={togglePlay}
-          >
-            {isPlaying ? (
-              <Pause className="h-10 w-10 text-white" />
-            ) : (
+        {/* Center Play/Pause (only show when controls visible and not playing) */}
+        {!isPlaying && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="h-20 w-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
               <Play className="h-10 w-10 text-white ml-1" />
-            )}
-          </Button>
-        </div>
+            </div>
+          </div>
+        )}
 
         {/* Bottom Controls */}
         <div className="absolute bottom-0 left-0 right-0 p-4">
