@@ -1,0 +1,290 @@
+version: '3.8'
+
+services:
+  # MongoDB - Primary Database
+  mongodb:
+    image: mongo:7.0
+    container_name: fun-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: dev_password_change_in_prod
+      MONGO_INITDB_DATABASE: fun
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - fun-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/fun --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis - Cache & Sessions
+  redis:
+    image: redis:7-alpine
+    container_name: fun-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass dev_redis_password
+    volumes:
+      - redis_data:/data
+    networks:
+      - fun-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ../../backend/services/auth
+      dockerfile: Dockerfile
+    container_name: fun-auth-service
+    ports:
+      - "3001:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      MONGO_URI: mongodb://admin:dev_password_change_in_prod@mongodb:27017/fun?authSource=admin
+      REDIS_URI: redis://:dev_redis_password@redis:6379
+      JWT_SECRET: dev_jwt_secret_change_in_prod_use_256_bit_key
+      JWT_EXPIRES_IN: 1h
+      JWT_REFRESH_EXPIRES_IN: 30d
+      FIREBASE_PROJECT_ID: fun-app-dev
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - fun-network
+    volumes:
+      - ../../backend/services/auth:/app
+      - /app/node_modules
+    command: npm run dev
+
+  # Content Service
+  content-service:
+    build:
+      context: ../../backend/services/content
+      dockerfile: Dockerfile
+    container_name: fun-content-service
+    ports:
+      - "3002:3000"
+      - "3012:3010" # Socket.IO port
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      SOCKET_PORT: 3010
+      MONGO_URI: mongodb://admin:dev_password_change_in_prod@mongodb:27017/fun?authSource=admin
+      REDIS_URI: redis://:dev_redis_password@redis:6379
+      AUTH_SERVICE_URL: http://auth-service:3000
+      COMMERCE_API_URL: http://localhost:4000 # External commerce API
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    networks:
+      - fun-network
+    volumes:
+      - ../../backend/services/content:/app
+      - /app/node_modules
+    command: npm run dev
+
+  # Media Service
+  media-service:
+    build:
+      context: ../../backend/services/media
+      dockerfile: Dockerfile
+    container_name: fun-media-service
+    ports:
+      - "3003:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      MONGO_URI: mongodb://admin:dev_password_change_in_prod@mongodb:27017/fun?authSource=admin
+      REDIS_URI: redis://:dev_redis_password@redis:6379
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-your_aws_key}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-your_aws_secret}
+      AWS_REGION: us-east-1
+      AWS_S3_BUCKET: fun-app-media-dev
+      CLOUDFRONT_DOMAIN: d1234567890.cloudfront.net
+      TRANSCODING_ENABLED: true
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - fun-network
+    volumes:
+      - ../../backend/services/media:/app
+      - /app/node_modules
+      - media_temp:/tmp/media
+    command: npm run dev
+
+  # Payment Service
+  payment-service:
+    build:
+      context: ../../backend/services/payment
+      dockerfile: Dockerfile
+    container_name: fun-payment-service
+    ports:
+      - "3004:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      MONGO_URI: mongodb://admin:dev_password_change_in_prod@mongodb:27017/fun?authSource=admin
+      REDIS_URI: redis://:dev_redis_password@redis:6379
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_xxx}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-whsec_xxx}
+      APPLE_SHARED_SECRET: ${APPLE_SHARED_SECRET:-apple_secret}
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${GOOGLE_SERVICE_ACCOUNT_JSON:-{}}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - fun-network
+    volumes:
+      - ../../backend/services/payment:/app
+      - /app/node_modules
+    command: npm run dev
+
+  # Kong API Gateway
+  kong-database:
+    image: postgres:15-alpine
+    container_name: fun-kong-db
+    environment:
+      POSTGRES_USER: kong
+      POSTGRES_PASSWORD: kong_dev_password
+      POSTGRES_DB: kong
+    volumes:
+      - kong_data:/var/lib/postgresql/data
+    networks:
+      - fun-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kong"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kong-migrations:
+    image: kong:3.5-alpine
+    container_name: fun-kong-migrations
+    command: kong migrations bootstrap
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong_dev_password
+      KONG_PG_DATABASE: kong
+    depends_on:
+      kong-database:
+        condition: service_healthy
+    networks:
+      - fun-network
+
+  kong:
+    image: kong:3.5-alpine
+    container_name: fun-kong-gateway
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong_dev_password
+      KONG_PG_DATABASE: kong
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+    ports:
+      - "8000:8000"  # Proxy port (main API endpoint)
+      - "8001:8001"  # Admin API
+    depends_on:
+      kong-database:
+        condition: service_healthy
+      kong-migrations:
+        condition: service_completed_successfully
+    networks:
+      - fun-network
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Admin Dashboard (Web UI)
+  admin-dashboard:
+    build:
+      context: ../../admin
+      dockerfile: Dockerfile
+    container_name: fun-admin-dashboard
+    ports:
+      - "3010:3000"
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://kong:8000
+      NEXT_PUBLIC_AUTH_SERVICE_URL: http://auth-service:3000
+      NEXT_PUBLIC_CONTENT_SERVICE_URL: http://content-service:3000
+      NEXT_PUBLIC_MEDIA_SERVICE_URL: http://media-service:3000
+      NEXT_PUBLIC_PAYMENT_SERVICE_URL: http://payment-service:3000
+      NODE_ENV: production
+    networks:
+      - fun-network
+    depends_on:
+      - kong
+      - auth-service
+      - content-service
+      - media-service
+      - payment-service
+    restart: unless-stopped
+
+  # User Web App
+  webapp:
+    build:
+      context: ../../webapp
+      dockerfile: Dockerfile
+    container_name: fun-webapp
+    ports:
+      - "3020:3000"
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://kong:8000
+      NEXT_PUBLIC_AUTH_SERVICE_URL: http://auth-service:3000
+      NEXT_PUBLIC_CONTENT_SERVICE_URL: http://content-service:3000
+      NEXT_PUBLIC_PAYMENT_SERVICE_URL: http://payment-service:3000
+      NEXT_PUBLIC_SOCKET_URL: http://content-service:3000
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_your_key_here
+      NODE_ENV: production
+    networks:
+      - fun-network
+    depends_on:
+      - kong
+      - auth-service
+      - content-service
+      - payment-service
+    restart: unless-stopped
+
+networks:
+  fun-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local
+  redis_data:
+    driver: local
+  kong_data:
+    driver: local
+  media_temp:
+    driver: local
