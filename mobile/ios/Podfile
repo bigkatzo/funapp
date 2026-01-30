@@ -1,0 +1,34 @@
+# Podfile for FUN iOS App
+
+platform :ios, '15.0'
+use_frameworks!
+
+target 'FUN' do
+  # Networking
+  pod 'Alamofire', '~> 5.8'
+  
+  # Image loading
+  pod 'Kingfisher', '~> 7.10'
+  
+  # Secure storage
+  pod 'KeychainAccess', '~> 4.2'
+  
+  # Real-time communication
+  pod 'Socket.IO-Client-Swift', '~> 16.1'
+  
+  # AppLovin MAX (includes AdMob mediation)
+  pod 'AppLovinSDK', '~> 12.1'
+  pod 'AppLovinMediationGoogleAdManagerAdapter', '~> 11.0'
+  
+  target 'FUNTests' do
+    inherit! :search_paths
+  end
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+    end
+  end
+end

@@ -1,0 +1,122 @@
+# FUN App - Git Ignore
+
+### Node.js ###
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+build/
+*.log
+
+### iOS ###
+# Xcode
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+*.xcuserstate
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+
+# CocoaPods
+Pods/
+*.podspec
+Podfile.lock
+
+# Swift Package Manager
+.swiftpm/
+.build/
+Package.resolved
+
+# Carthage
+Carthage/Build/
+
+# iOS Provisioning
+*.mobileprovision
+*.cer
+*.p12
+*.certSigningRequest
+
+### Android ###
+# Gradle
+.gradle/
+local.properties
+*.iml
+.idea/
+*.hprof
+
+# Android Studio
+.navigation/
+captures/
+output.json
+
+# Build outputs
+*.apk
+*.aab
+*.ap_
+*.dex
+/build/
+/*/build/
+
+# NDK
+obj/
+.externalNativeBuild/
+.cxx/
+
+### Databases ###
+# MongoDB
+*.lock
+
+# Redis
+dump.rdb
+
+### Docker ###
+docker-compose.override.yml
+.dockerignore
+
+### IDEs ###
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+### OS ###
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+### Secrets ###
+secrets/
+*.pem
+*.key
+serviceAccountKey.json
+
+### Testing ###
+coverage/
+.nyc_output/
+test-results/
+junit.xml
+
+### Terraform ###
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+### Misc ###
+*.orig
+.cache/
+tmp/
+temp/

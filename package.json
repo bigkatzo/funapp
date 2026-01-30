@@ -1,0 +1,45 @@
+{
+  "name": "fun-app",
+  "version": "0.1.0",
+  "description": "Vertical video streaming platform with freemium content and commerce",
+  "private": true,
+  "workspaces": [
+    "backend/services/*",
+    "backend/shared"
+  ],
+  "scripts": {
+    "dev": "docker-compose -f infrastructure/docker/docker-compose.yml up",
+    "dev:stop": "docker-compose -f infrastructure/docker/docker-compose.yml down",
+    "install:all": "npm install && npm run install:backend",
+    "install:backend": "npm install --workspaces",
+    "test": "npm run test --workspaces",
+    "test:coverage": "npm run test:coverage --workspaces",
+    "lint": "npm run lint --workspaces",
+    "format": "prettier --write \"backend/**/*.{js,ts,json}\"",
+    "build:backend": "npm run build --workspaces",
+    "clean": "npm run clean --workspaces && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "prettier": "^3.1.1",
+    "eslint": "^8.56.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fun-app/fun.git"
+  },
+  "keywords": [
+    "video-streaming",
+    "vertical-video",
+    "mobile-app",
+    "freemium",
+    "short-form-content"
+  ],
+  "author": "FUN Team",
+  "license": "PROPRIETARY"
+}
