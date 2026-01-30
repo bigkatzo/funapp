@@ -94,6 +94,10 @@ class VideoPlayerManager(context: Context) {
         player.seekTo(position)
     }
     
+    fun setPlaybackSpeed(speed: Float) {
+        player.setPlaybackSpeed(speed)
+    }
+    
     private fun startProgressUpdater() {
         // Update current position and progress
         // This would be better with a coroutine, but keeping it simple

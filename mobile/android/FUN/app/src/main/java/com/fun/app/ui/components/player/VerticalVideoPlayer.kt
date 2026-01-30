@@ -7,6 +7,7 @@ package com.fun.app.ui.components.player
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -67,6 +68,8 @@ fun VideoPlayerView(
     var showControls by remember { mutableStateOf(true) }
     var showLikeAnimation by remember { mutableStateOf(false) }
     var showUnlockSheet by remember { mutableStateOf(false) }
+    var showSeekAnimation by remember { mutableStateOf<String?>(null) } // "forward" or "backward"
+    var isLongPressing by remember { mutableStateOf(false) }
     
     val playerManager = remember {
         VideoPlayerManager(context)
@@ -111,15 +114,50 @@ fun VideoPlayerView(
                         detectTapGestures(
                             onTap = {
                                 showControls = !showControls
+                                if (showControls) {
+                                    playerManager.pause()
+                                } else {
+                                    playerManager.play()
+                                }
                             },
                             onDoubleTap = { offset ->
+                                val direction = if (offset.x > size.width / 2) "forward" else "backward"
+                                showSeekAnimation = direction
+                                
                                 handleDoubleTap(
                                     offset = offset,
                                     size = size,
                                     playerManager = playerManager,
                                     onLike = { showLikeAnimation = true }
                                 )
+                                
+                                // Hide animation after delay
+                                kotlinx.coroutines.GlobalScope.launch {
+                                    delay(500)
+                                    showSeekAnimation = null
+                                }
+                            },
+                            onLongPress = {
+                                isLongPressing = true
+                                playerManager.setPlaybackSpeed(2.0f)
                             }
+                        )
+                    }
+                    .pointerInput(Unit) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = {
+                                isLongPressing = true
+                                playerManager.setPlaybackSpeed(2.0f)
+                            },
+                            onDragEnd = {
+                                isLongPressing = false
+                                playerManager.setPlaybackSpeed(1.0f)
+                            },
+                            onDragCancel = {
+                                isLongPressing = false
+                                playerManager.setPlaybackSpeed(1.0f)
+                            },
+                            onDrag = { _, _ -> }
                         )
                     }
             )
@@ -138,6 +176,48 @@ fun VideoPlayerView(
             LaunchedEffect(Unit) {
                 delay(1000)
                 showLikeAnimation = false
+            }
+        }
+        
+        // Seek Animation
+        showSeekAnimation?.let { direction ->
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (direction == "backward") {
+                        androidx.compose.material.icons.Icons.Default.Replay10
+                    } else {
+                        androidx.compose.material.icons.Icons.Default.Forward10
+                    },
+                    contentDescription = "Seek $direction",
+                    tint = Color.White,
+                    modifier = Modifier.size(80.dp)
+                )
+            }
+        }
+        
+        // Speed Indicator
+        if (isLongPressing) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 60.dp),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                Surface(
+                    color = Color.Black.copy(alpha = 0.7f),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = "2x Speed",
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    )
+                }
             }
         }
         
