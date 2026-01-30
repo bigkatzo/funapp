@@ -119,7 +119,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-4 pb-24">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <Card>

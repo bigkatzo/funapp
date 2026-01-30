@@ -346,7 +346,7 @@ export default function HomePage() {
 
       {/* Swipe hint for mobile (shows briefly) */}
       {currentIndex === 0 && (
-        <div className="absolute bottom-24 left-0 right-0 z-40 text-center text-white/80 text-sm animate-pulse">
+        <div className="absolute bottom-28 left-0 right-0 z-40 text-center text-white/80 text-sm animate-pulse">
           <p>Swipe up or scroll to see more videos</p>
         </div>
       )}

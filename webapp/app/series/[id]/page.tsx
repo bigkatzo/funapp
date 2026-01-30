@@ -119,7 +119,7 @@ export default function SeriesDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 pb-20">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 pb-24">
       {/* Back Button */}
       <div className="p-4">
         <Button variant="ghost" onClick={() => router.back()}>
