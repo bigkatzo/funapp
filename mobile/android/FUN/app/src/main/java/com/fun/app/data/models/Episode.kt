@@ -11,27 +11,32 @@ import com.squareup.moshi.JsonClass
 data class Episode(
     @Json(name = "_id") val id: String,
     val seriesId: String,
-    val episodeNumber: Int, // New field
-    val episodeNum: Int? = null, // Legacy field
+    val seasonNumber: Int = 1,
+    val episodeNumber: Int,
     val title: String,
     val description: String?,
     val thumbnailUrl: String,
     val videoUrl: String?,
     val duration: Int,  // in seconds
     val unlockMethod: UnlockMethod,
-    val creditsRequired: Int?,
-    val purchasePrice: Double?,
-    val isUnlocked: Boolean,
-    val viewCount: Int = 0,
-    val likeCount: Int = 0,
-    val commentCount: Int = 0,
+    val creditsRequired: Int? = null,
+    val purchasePrice: Double? = null,
+    val stats: EpisodeStats,
+    var isLiked: Boolean = false,
+    var isUnlocked: Boolean = false,
+    var isWatched: Boolean = false,
+    var watchProgress: Double? = null, // seconds watched
     val createdAt: java.util.Date,
     // Legacy fields for backward compatibility
+    val episodeNum: Int? = null,
     val isFree: Boolean? = null,
     val unlockCostCredits: Int? = null,
     val unlockCostUSD: Double? = null,
     val premiumOnly: Boolean? = null,
-    val tags: List<ProductTag>? = null
+    val tags: List<ProductTag>? = null,
+    val viewCount: Int = 0,
+    val likeCount: Int = 0,
+    val commentCount: Int = 0
 ) {
     val formattedDuration: String
         get() {
@@ -39,14 +44,27 @@ data class Episode(
             val seconds = duration % 60
             return String.format("%d:%02d", minutes, seconds)
         }
+    
+    val progressPercent: Double
+        get() {
+            val progress = watchProgress ?: return 0.0
+            return if (duration > 0) (progress / duration) * 100 else 0.0
+        }
 }
 
 enum class UnlockMethod {
-    FREE,
-    CREDITS,
-    PURCHASE,
-    PREMIUM
+    @Json(name = "free") FREE,
+    @Json(name = "credits") CREDITS,
+    @Json(name = "purchase") PURCHASE,
+    @Json(name = "premium") PREMIUM
 }
+
+@JsonClass(generateAdapter = true)
+data class EpisodeStats(
+    val views: Int,
+    val likes: Int,
+    val comments: Int
+)
 
 @JsonClass(generateAdapter = true)
 data class ProductTag(

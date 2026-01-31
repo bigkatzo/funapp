@@ -12,11 +12,11 @@ struct MainTabView: View {
     
     var body: some View {
         TabView(selection: $selectedTab) {
-            // Feed Tab
+            // Discover Tab (renamed from Feed)
             FeedView()
                 .tabItem {
-                    Image(systemName: "house.fill")
-                    Text("Feed")
+                    Image(systemName: "play.circle.fill")
+                    Text("Discover")
                 }
                 .tag(0)
             
@@ -28,39 +28,36 @@ struct MainTabView: View {
                 }
                 .tag(1)
             
-            // Market Tab (Placeholder)
-            MarketView()
-                .tabItem {
-                    Image(systemName: "bag.fill")
-                    Text("Market")
-                }
-                .tag(2)
-            
-            // Credits Tab
-            CreditsView()
-                .tabItem {
-                    Image(systemName: "creditcard.fill")
-                    Text("Credits")
-                }
-                .tag(3)
-            
-            // Profile Tab
+            // Profile Tab (renamed from Person)
             ProfileView()
                 .tabItem {
-                    Image(systemName: "person.fill")
-                    Text("Profile")
+                    Image(systemName: "person.circle.fill")
+                    Text("You")
                 }
-                .tag(4)
+                .tag(2)
         }
-        .accentColor(Colors.primary)
+        .accentColor(.purple)
         .onAppear {
-            // Configure tab bar appearance
+            // Configure tab bar appearance - dark with blur
             let appearance = UITabBarAppearance()
             appearance.configureWithOpaqueBackground()
-            appearance.backgroundColor = UIColor(Colors.surface)
+            appearance.backgroundColor = UIColor.black.withAlphaComponent(0.9)
+            
+            // Item colors
+            appearance.stackedLayoutAppearance.normal.iconColor = UIColor.white.withAlphaComponent(0.6)
+            appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
+                .foregroundColor: UIColor.white.withAlphaComponent(0.6)
+            ]
+            appearance.stackedLayoutAppearance.selected.iconColor = UIColor.systemPurple
+            appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
+                .foregroundColor: UIColor.systemPurple
+            ]
             
             UITabBar.appearance().standardAppearance = appearance
             UITabBar.appearance().scrollEdgeAppearance = appearance
+            
+            // Ensure tab bar is always visible
+            UITabBar.appearance().isTranslucent = true
             
             // Listen for subscription request
             NotificationCenter.default.addObserver(

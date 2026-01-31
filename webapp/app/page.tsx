@@ -4,17 +4,25 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { contentAPI } from '@/lib/api-client';
-import { Episode } from '@/types';
+import { Episode, Series } from '@/types';
 import { VerticalVideoPlayer } from '@/components/video/vertical-video-player';
+import { ContinuePrompt } from '@/components/video/continue-prompt';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { createDiscoverPlaylist } from '@/lib/playlist-manager';
+import { useWatchHistory } from '@/hooks/use-watch-history';
 
 export default function HomePage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading, checkAuth } = useAuthStore();
+  const watchHistoryManager = useWatchHistory();
+  
   const [episodes, setEpisodes] = useState<Episode[]>([]);
+  const [allSeries, setAllSeries] = useState<Series[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [showContinuePrompt, setShowContinuePrompt] = useState(false);
+  const [mode, setMode] = useState<'discover' | 'binge'>('discover');
 
   useEffect(() => {
     checkAuth();
@@ -31,103 +39,192 @@ export default function HomePage() {
 
   useEffect(() => {
     if (isAuthenticated || isDemoMode) {
-      loadFeed();
+      loadDiscoverFeed();
     }
   }, [isAuthenticated]);
 
-  const loadFeed = async () => {
+  const loadDiscoverFeed = async () => {
     try {
       setIsLoading(true);
       
       // DEMO MODE: Use mock data
       if (isDemoMode) {
-        const mockEpisodes: Episode[] = [
+        const mockSeries: Series[] = [
           {
-            _id: '1',
-            seriesId: 'series1',
-            episodeNumber: 1,
-            title: 'Love in the City - Episode 1',
-            description: 'A chance encounter changes everything when Sarah meets Alex at a coffee shop.',
-            videoUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-            thumbnailUrl: 'https://picsum.photos/1080/1920?random=1',
-            duration: 120,
-            unlockMethod: 'free',
-            stats: { views: 15420, likes: 1230, comments: 89 },
-            isLiked: false,
-            isUnlocked: true,
+            _id: 'series1',
+            title: 'Love in the City',
+            description: 'A modern romance',
+            thumbnailUrl: 'https://picsum.photos/seed/series1/400/600',
+            genre: ['Romance', 'Drama'],
+            tags: ['love', 'city'],
+            creator: { _id: '1', displayName: 'Studio FUN' },
+            totalEpisodes: 12,
+            stats: { totalViews: 1254300, totalLikes: 89400, totalComments: 5200 },
             createdAt: new Date(),
+            seasons: [
+              {
+                seasonNumber: 1,
+                episodes: [
+                  {
+                    _id: 'ep1',
+                    seriesId: 'series1',
+                    seasonNumber: 1,
+                    episodeNumber: 1,
+                    title: 'Love in the City - Episode 1',
+                    description: 'Sarah meets Alex at a coffee shop, and their lives change forever.',
+                    videoUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+                    thumbnailUrl: 'https://picsum.photos/1080/1920?random=1',
+                    duration: 180,
+                    unlockMethod: 'free',
+                    stats: { views: 15420, likes: 1230, comments: 89 },
+                    isLiked: false,
+                    isUnlocked: true,
+                    createdAt: new Date(),
+                  },
+                  {
+                    _id: 'ep2',
+                    seriesId: 'series1',
+                    seasonNumber: 1,
+                    episodeNumber: 2,
+                    title: 'Love in the City - Episode 2',
+                    description: 'Sarah and Alex go on their first date.',
+                    videoUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+                    thumbnailUrl: 'https://picsum.photos/1080/1920?random=2',
+                    duration: 150,
+                    unlockMethod: 'free',
+                    stats: { views: 12300, likes: 980, comments: 67 },
+                    isLiked: false,
+                    isUnlocked: true,
+                    createdAt: new Date(),
+                  },
+                ],
+              },
+            ],
           },
           {
-            _id: '2',
-            seriesId: 'series1',
-            episodeNumber: 2,
-            title: 'Love in the City - Episode 2',
-            description: 'Sarah and Alex go on their first date, but things don\'t go as planned.',
-            videoUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-            thumbnailUrl: 'https://picsum.photos/1080/1920?random=2',
-            duration: 150,
-            unlockMethod: 'free',
-            stats: { views: 12300, likes: 980, comments: 67 },
-            isLiked: false,
-            isUnlocked: true,
+            _id: 'series2',
+            title: 'Mystery Manor',
+            description: 'Detective Chen investigates',
+            thumbnailUrl: 'https://picsum.photos/seed/series2/400/600',
+            genre: ['Mystery', 'Thriller'],
+            tags: ['detective', 'mystery'],
+            creator: { _id: '2', displayName: 'Mystery Productions' },
+            totalEpisodes: 16,
+            stats: { totalViews: 2890500, totalLikes: 178900, totalComments: 12400 },
             createdAt: new Date(),
+            seasons: [
+              {
+                seasonNumber: 1,
+                episodes: [
+                  {
+                    _id: 'ep3',
+                    seriesId: 'series2',
+                    seasonNumber: 1,
+                    episodeNumber: 1,
+                    title: 'Mystery Manor - Episode 1',
+                    description: 'Detective Chen investigates mysterious disappearances.',
+                    videoUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+                    thumbnailUrl: 'https://picsum.photos/1080/1920?random=3',
+                    duration: 180,
+                    unlockMethod: 'free',
+                    stats: { views: 28900, likes: 2100, comments: 156 },
+                    isLiked: false,
+                    isUnlocked: true,
+                    createdAt: new Date(),
+                  },
+                ],
+              },
+            ],
           },
           {
-            _id: '3',
-            seriesId: 'series2',
-            episodeNumber: 1,
-            title: 'Mystery Manor - Episode 1',
-            description: 'Detective Chen investigates a series of mysterious disappearances.',
-            videoUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-            thumbnailUrl: 'https://picsum.photos/1080/1920?random=3',
-            duration: 180,
-            unlockMethod: 'free',
-            stats: { views: 28900, likes: 2100, comments: 156 },
-            isLiked: false,
-            isUnlocked: true,
+            _id: 'series3',
+            title: 'Campus Hearts',
+            description: 'High school drama',
+            thumbnailUrl: 'https://picsum.photos/seed/series3/400/600',
+            genre: ['Drama', 'Youth'],
+            tags: ['school', 'friendship'],
+            creator: { _id: '3', displayName: 'Youth Media' },
+            totalEpisodes: 20,
+            stats: { totalViews: 1876200, totalLikes: 145600, totalComments: 8900 },
             createdAt: new Date(),
+            seasons: [
+              {
+                seasonNumber: 1,
+                episodes: [
+                  {
+                    _id: 'ep4',
+                    seriesId: 'series3',
+                    seasonNumber: 1,
+                    episodeNumber: 1,
+                    title: 'Campus Hearts - Episode 1',
+                    description: 'High school friends navigate teenage life.',
+                    videoUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+                    thumbnailUrl: 'https://picsum.photos/1080/1920?random=4',
+                    duration: 150,
+                    unlockMethod: 'free',
+                    stats: { views: 19200, likes: 1450, comments: 98 },
+                    isLiked: false,
+                    isUnlocked: true,
+                    createdAt: new Date(),
+                  },
+                ],
+              },
+            ],
           },
           {
-            _id: '4',
-            seriesId: 'series3',
-            episodeNumber: 1,
-            title: 'Campus Hearts - Episode 1',
-            description: 'High school friends navigate the ups and downs of teenage life.',
-            videoUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-            thumbnailUrl: 'https://picsum.photos/1080/1920?random=4',
-            duration: 150,
-            unlockMethod: 'free',
-            stats: { views: 19200, likes: 1450, comments: 98 },
-            isLiked: false,
-            isUnlocked: true,
+            _id: 'series4',
+            title: 'CEO Romance',
+            description: 'Corporate love story',
+            thumbnailUrl: 'https://picsum.photos/seed/series4/400/600',
+            genre: ['Romance', 'Business'],
+            tags: ['ceo', 'office'],
+            creator: { _id: '1', displayName: 'Studio FUN' },
+            totalEpisodes: 15,
+            stats: { totalViews: 3245100, totalLikes: 234500, totalComments: 15600 },
             createdAt: new Date(),
-          },
-          {
-            _id: '5',
-            seriesId: 'series4',
-            episodeNumber: 1,
-            title: 'CEO Romance - Episode 1',
-            description: 'A powerful CEO meets a spirited intern who changes everything.',
-            videoUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-            thumbnailUrl: 'https://picsum.photos/1080/1920?random=5',
-            duration: 165,
-            unlockMethod: 'free',
-            stats: { views: 32400, likes: 2870, comments: 201 },
-            isLiked: false,
-            isUnlocked: true,
-            createdAt: new Date(),
+            seasons: [
+              {
+                seasonNumber: 1,
+                episodes: [
+                  {
+                    _id: 'ep5',
+                    seriesId: 'series4',
+                    seasonNumber: 1,
+                    episodeNumber: 1,
+                    title: 'CEO Romance - Episode 1',
+                    description: 'A powerful CEO meets a spirited intern.',
+                    videoUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+                    thumbnailUrl: 'https://picsum.photos/1080/1920?random=5',
+                    duration: 165,
+                    unlockMethod: 'free',
+                    stats: { views: 32400, likes: 2870, comments: 201 },
+                    isLiked: false,
+                    isUnlocked: true,
+                    createdAt: new Date(),
+                  },
+                ],
+              },
+            ],
           },
         ];
-        setEpisodes(mockEpisodes);
+
+        setAllSeries(mockSeries);
+        
+        // Create discover playlist (Episode 1s only)
+        const discoverPlaylist = await createDiscoverPlaylist(mockSeries);
+        setEpisodes(discoverPlaylist);
         setIsLoading(false);
         return;
       }
       
-      const response = await contentAPI.get<{ episodes: Episode[] }>('/feed');
-      setEpisodes(response.episodes);
+      const response = await contentAPI.get<{ series: Series[] }>('/series');
+      setAllSeries(response.series);
+      
+      const discoverPlaylist = await createDiscoverPlaylist(response.series);
+      setEpisodes(discoverPlaylist);
     } catch (error) {
-      console.error('Failed to load feed:', error);
-      toast.error('Failed to load videos');
+      console.error('Failed to load discover feed:', error);
+      toast.error('Failed to load discover feed');
     } finally {
       setIsLoading(false);
     }
@@ -138,27 +235,6 @@ export default function HomePage() {
     if (!episode) return;
 
     try {
-      // DEMO MODE: Just update locally
-      if (isDemoMode) {
-        setEpisodes((prev) =>
-          prev.map((ep, idx) =>
-            idx === currentIndex
-              ? {
-                  ...ep,
-                  isLiked: !ep.isLiked,
-                  stats: {
-                    ...ep.stats,
-                    likes: ep.stats.likes + (ep.isLiked ? -1 : 1),
-                  },
-                }
-              : ep
-          )
-        );
-        toast.success(episode.isLiked ? 'Unliked!' : 'Liked!');
-        return;
-      }
-      
-      await contentAPI.post(`/episodes/${episode._id}/like`);
       setEpisodes((prev) =>
         prev.map((ep, idx) =>
           idx === currentIndex
@@ -173,6 +249,7 @@ export default function HomePage() {
             : ep
         )
       );
+      toast.success(episode.isLiked ? 'Unliked!' : 'Liked!');
     } catch (error) {
       toast.error('Failed to like video');
     }
@@ -202,10 +279,8 @@ export default function HomePage() {
     if (currentIndex < episodes.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
-      // Load more episodes when reaching the end
-      setCurrentIndex(0); // Loop back for demo
       toast.info('Loading more videos...');
-      loadFeed();
+      loadDiscoverFeed();
     }
   };
 
@@ -216,22 +291,59 @@ export default function HomePage() {
   };
 
   const handleVideoEnd = () => {
-    // Auto-advance to next video when current one ends
-    setTimeout(() => {
-      goToNextVideo();
-    }, 500);
+    const currentEpisode = episodes[currentIndex];
+    
+    // Save watch progress
+    watchHistoryManager.saveProgress(currentEpisode, currentEpisode.duration, true);
+    
+    // In discover mode, show continue prompt for Episode 1s
+    if (mode === 'discover' && currentEpisode.episodeNumber === 1) {
+      setShowContinuePrompt(true);
+    } else {
+      // Auto-advance in binge mode
+      setTimeout(() => {
+        goToNextVideo();
+      }, 500);
+    }
+  };
+
+  const handleContinueSeries = async () => {
+    const currentEpisode = episodes[currentIndex];
+    const series = allSeries.find(s => s._id === currentEpisode.seriesId);
+    
+    if (!series) {
+      toast.error('Series not found');
+      return;
+    }
+
+    // Switch to binge mode
+    setMode('binge');
+    setShowContinuePrompt(false);
+    
+    // Navigate to watch page in binge mode
+    router.push(`/watch/${currentEpisode._id}?mode=binge&seriesId=${series._id}`);
+  };
+
+  const handleSkipToDiscover = () => {
+    setShowContinuePrompt(false);
+    goToNextVideo();
+  };
+
+  const handleSeriesTitleClick = () => {
+    const currentEpisode = episodes[currentIndex];
+    router.push(`/series/${currentEpisode.seriesId}`);
   };
 
   // Handle scroll/swipe for next/prev video
   useEffect(() => {
     let lastScrollTime = 0;
-    const scrollThrottle = 800; // Prevent too rapid scrolling
+    const scrollThrottle = 800;
 
     const handleWheel = (e: WheelEvent) => {
       const now = Date.now();
       if (now - lastScrollTime < scrollThrottle) return;
       
-      if (Math.abs(e.deltaY) > 10) { // Minimum scroll threshold
+      if (Math.abs(e.deltaY) > 10) {
         if (e.deltaY > 0) {
           goToNextVideo();
           lastScrollTime = now;
@@ -242,7 +354,6 @@ export default function HomePage() {
       }
     };
 
-    // Keyboard navigation
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowDown' || e.key === 'PageDown') {
         e.preventDefault();
@@ -253,7 +364,6 @@ export default function HomePage() {
       }
     };
 
-    // Touch swipe for mobile
     let touchStartY = 0;
     let touchEndY = 0;
     
@@ -265,7 +375,7 @@ export default function HomePage() {
       touchEndY = e.changedTouches[0].clientY;
       const swipeDistance = touchStartY - touchEndY;
       
-      if (Math.abs(swipeDistance) > 50) { // Minimum swipe distance
+      if (Math.abs(swipeDistance) > 50) {
         if (swipeDistance > 0) {
           goToNextVideo();
         } else {
@@ -307,49 +417,43 @@ export default function HomePage() {
     );
   }
 
+  const currentEpisode = episodes[currentIndex];
+  const currentSeries = allSeries.find(s => s._id === currentEpisode.seriesId);
+
   return (
     <div className="h-screen overflow-hidden bg-black relative">
       <VerticalVideoPlayer
-        episode={episodes[currentIndex]}
+        episode={currentEpisode}
+        series={currentSeries}
+        mode="discover"
         onLike={handleLike}
         onComment={handleComment}
         onShare={handleShare}
         onVideoEnd={handleVideoEnd}
+        onSeriesTitleClick={handleSeriesTitleClick}
+        currentPosition={{ current: currentIndex + 1, total: episodes.length }}
         autoPlay
       />
       
+      {/* Continue Prompt */}
+      {showContinuePrompt && currentSeries && (
+        <ContinuePrompt
+          series={currentSeries}
+          nextEpisode={currentSeries.seasons?.[0]?.episodes?.[1] || currentEpisode}
+          onContinue={handleContinueSeries}
+          onSkip={handleSkipToDiscover}
+        />
+      )}
+
       {/* Video counter */}
       <div className="absolute top-4 left-4 z-40 bg-black/50 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm">
         {currentIndex + 1} / {episodes.length}
       </div>
 
-      {/* Navigation hints */}
-      <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-40 flex flex-col gap-4">
-        <button
-          onClick={goToPrevVideo}
-          disabled={currentIndex === 0}
-          className="bg-white/20 hover:bg-white/30 disabled:opacity-30 disabled:cursor-not-allowed backdrop-blur-sm text-white p-3 rounded-full transition-all"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-          </svg>
-        </button>
-        <button
-          onClick={goToNextVideo}
-          className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white p-3 rounded-full transition-all animate-bounce"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
+      {/* Mode indicator (for demo) */}
+      <div className="absolute top-4 right-4 z-40 bg-purple-600/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-semibold">
+        Discover Mode
       </div>
-
-      {/* Swipe hint for mobile (shows briefly) */}
-      {currentIndex === 0 && (
-        <div className="absolute bottom-28 left-0 right-0 z-40 text-center text-white/80 text-sm animate-pulse">
-          <p>Swipe up or scroll to see more videos</p>
-        </div>
-      )}
     </div>
   );
 }

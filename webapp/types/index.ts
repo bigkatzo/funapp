@@ -9,6 +9,16 @@ export interface User {
   createdAt: Date;
 }
 
+export interface Season {
+  seasonNumber: number;
+  title?: string;
+  description?: string;
+  episodes: Episode[];
+  thumbnailUrl?: string;
+  releaseDate?: Date;
+  isCompleted?: boolean; // User has watched all episodes
+}
+
 export interface Series {
   _id: string;
   title: string;
@@ -23,7 +33,8 @@ export interface Series {
     profileImage?: string;
   };
   totalEpisodes: number;
-  episodes?: Episode[];
+  seasons?: Season[]; // Multi-season support
+  episodes?: Episode[]; // Backward compatibility
   stats: {
     totalViews: number;
     totalLikes: number;
@@ -35,6 +46,7 @@ export interface Series {
 export interface Episode {
   _id: string;
   seriesId: string;
+  seasonNumber: number; // Season support
   episodeNumber: number;
   title: string;
   description?: string;
@@ -51,7 +63,43 @@ export interface Episode {
   };
   isLiked?: boolean;
   isUnlocked?: boolean;
+  isWatched?: boolean; // User completed this episode
+  watchProgress?: number; // Seconds watched
   createdAt: Date;
+}
+
+// Playlist and watch mode types
+export type PlaylistMode = 'discover' | 'binge' | 'series';
+
+export interface PlaylistContext {
+  mode: PlaylistMode;
+  currentEpisode: Episode;
+  nextEpisode?: Episode;
+  prevEpisode?: Episode;
+  seriesId?: string;
+  seasonNumber?: number;
+  totalEpisodes?: number;
+}
+
+export interface WatchHistoryEntry {
+  userId: string;
+  episodeId: string;
+  seriesId: string;
+  seasonNumber: number;
+  episodeNumber: number;
+  progress: number; // Seconds watched
+  duration: number; // Total episode duration
+  completed: boolean; // Watched >90%
+  watchedAt: Date;
+}
+
+export interface SeriesProgress {
+  seriesId: string;
+  lastWatchedEpisodeId: string;
+  lastWatchedSeasonNumber: number;
+  lastWatchedEpisodeNumber: number;
+  completedSeasons: number[]; // Array of completed season numbers
+  totalWatchTime: number; // Total seconds watched across all episodes
 }
 
 export interface Comment {

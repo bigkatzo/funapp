@@ -15,8 +15,8 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   
-  // Hide bottom nav on login, signup, and video player pages
-  const hideBottomNav = pathname === '/login' || pathname === '/signup' || pathname.startsWith('/watch/');
+  // Hide bottom nav only on login and signup pages
+  const hideBottomNav = pathname === '/login' || pathname === '/signup';
 
   return (
     <html lang="en">

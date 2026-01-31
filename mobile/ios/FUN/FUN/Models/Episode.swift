@@ -6,25 +6,44 @@ import Foundation
 
 struct Episode: Codable, Identifiable {
     let id: String
-    let episodeNum: Int
+    let seriesId: String
+    let seasonNumber: Int
+    let episodeNumber: Int
     let title: String
     let description: String?
     let thumbnailUrl: String
     let duration: Int  // in seconds
     let videoUrl: String?
-    let isFree: Bool
+    let unlockMethod: UnlockMethod
+    let creditsCost: Int?
+    let purchasePrice: Double?
+    let stats: EpisodeStats
+    var isLiked: Bool?
+    var isUnlocked: Bool?
+    var isWatched: Bool?
+    var watchProgress: Double? // seconds watched
+    let createdAt: Date
+    
+    // Legacy fields for backward compatibility
+    let episodeNum: Int?
+    let isFree: Bool?
     let unlockCostCredits: Int?
     let unlockCostUSD: Double?
-    let premiumOnly: Bool
+    let premiumOnly: Bool?
     let tags: [ProductTag]?
-    let isUnlocked: Bool?
     
     enum CodingKeys: String, CodingKey {
         case id = "_id"
-        case episodeNum, title, description, thumbnailUrl
-        case duration, videoUrl, isFree
+        case seriesId, seasonNumber, episodeNumber
+        case title, description, thumbnailUrl
+        case duration, videoUrl, unlockMethod
+        case creditsCost, purchasePrice, stats
+        case isLiked, isUnlocked, isWatched, watchProgress
+        case createdAt
+        // Legacy
+        case episodeNum, isFree
         case unlockCostCredits, unlockCostUSD, premiumOnly
-        case tags, isUnlocked
+        case tags
     }
     
     var formattedDuration: String {
@@ -32,6 +51,24 @@ struct Episode: Codable, Identifiable {
         let seconds = duration % 60
         return String(format: "%d:%02d", minutes, seconds)
     }
+    
+    var progressPercent: Double {
+        guard let progress = watchProgress, duration > 0 else { return 0 }
+        return (progress / Double(duration)) * 100
+    }
+}
+
+enum UnlockMethod: String, Codable {
+    case free = "free"
+    case credits = "credits"
+    case premium = "premium"
+    case purchase = "purchase"
+}
+
+struct EpisodeStats: Codable {
+    let views: Int
+    let likes: Int
+    let comments: Int
 }
 
 struct ProductTag: Codable {

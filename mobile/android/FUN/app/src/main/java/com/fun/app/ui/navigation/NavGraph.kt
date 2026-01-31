@@ -35,49 +35,93 @@ fun NavGraph(authViewModel: AuthViewModel) {
 @Composable
 fun MainScreen(authViewModel: AuthViewModel) {
     var selectedTab by remember { mutableStateOf(0) }
+    val navController = rememberNavController()
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.9f),
+                contentColor = androidx.compose.ui.graphics.Color.White
+            ) {
                 NavigationBarItem(
-                    icon = { Icon(androidx.compose.material.icons.Icons.Default.Home, "Feed") },
-                    label = { Text("Feed") },
+                    icon = { Icon(androidx.compose.material.icons.Icons.Default.PlayArrow, "Discover") },
+                    label = { Text("Discover") },
                     selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 }
+                    onClick = { selectedTab = 0 },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = androidx.compose.ui.graphics.Color(0xFF9C27B0),
+                        selectedTextColor = androidx.compose.ui.graphics.Color(0xFF9C27B0),
+                        unselectedIconColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.6f),
+                        unselectedTextColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.6f),
+                        indicatorColor = androidx.compose.ui.graphics.Color.Transparent
+                    )
                 )
                 NavigationBarItem(
-                    icon = { Icon(androidx.compose.material.icons.Icons.Default.PlayArrow, "Drama") },
-                    label = { Text("Drama") },
+                    icon = { Icon(androidx.compose.material.icons.Icons.Default.Search, "Browse") },
+                    label = { Text("Browse") },
                     selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 }
+                    onClick = { selectedTab = 1 },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = androidx.compose.ui.graphics.Color(0xFF9C27B0),
+                        selectedTextColor = androidx.compose.ui.graphics.Color(0xFF9C27B0),
+                        unselectedIconColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.6f),
+                        unselectedTextColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.6f),
+                        indicatorColor = androidx.compose.ui.graphics.Color.Transparent
+                    )
                 )
                 NavigationBarItem(
-                    icon = { Icon(androidx.compose.material.icons.Icons.Default.ShoppingBag, "Market") },
-                    label = { Text("Market") },
+                    icon = { Icon(androidx.compose.material.icons.Icons.Default.Person, "You") },
+                    label = { Text("You") },
                     selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 }
-                )
-                NavigationBarItem(
-                    icon = { Icon(androidx.compose.material.icons.Icons.Default.Star, "Credits") },
-                    label = { Text("Credits") },
-                    selected = selectedTab == 3,
-                    onClick = { selectedTab = 3 }
-                )
-                NavigationBarItem(
-                    icon = { Icon(androidx.compose.material.icons.Icons.Default.Person, "Profile") },
-                    label = { Text("Profile") },
-                    selected = selectedTab == 4,
-                    onClick = { selectedTab = 4 }
+                    onClick = { selectedTab = 2 },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = androidx.compose.ui.graphics.Color(0xFF9C27B0),
+                        selectedTextColor = androidx.compose.ui.graphics.Color(0xFF9C27B0),
+                        unselectedIconColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.6f),
+                        unselectedTextColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.6f),
+                        indicatorColor = androidx.compose.ui.graphics.Color.Transparent
+                    )
                 )
             }
         }
     ) { paddingValues ->
-        when (selectedTab) {
-            0 -> FeedScreen(Modifier.padding(paddingValues))
-            1 -> Text("Drama Screen", Modifier.padding(paddingValues))
-            2 -> Text("Market Screen", Modifier.padding(paddingValues))
-            3 -> Text("Credits Screen", Modifier.padding(paddingValues))
-            4 -> Text("Profile Screen", Modifier.padding(paddingValues))
+        NavHost(
+            navController = navController,
+            startDestination = "discover",
+            modifier = Modifier.padding(paddingValues)
+        ) {
+            composable("discover") { 
+                FeedScreen(Modifier) // Transformed to Discover
+            }
+            composable("browse") { 
+                Text("Browse Screen", Modifier.padding(paddingValues)) 
+            }
+            composable("profile") { 
+                Text("Profile Screen", Modifier.padding(paddingValues)) 
+            }
+            composable(
+                "watch/{episodeId}?mode={mode}&seriesId={seriesId}"
+            ) { backStackEntry ->
+                val episodeId = backStackEntry.arguments?.getString("episodeId") ?: ""
+                val modeStr = backStackEntry.arguments?.getString("mode") ?: "discover"
+                val seriesId = backStackEntry.arguments?.getString("seriesId")
+                val mode = when (modeStr) {
+                    "binge" -> com.fun.app.data.models.PlaylistMode.BINGE
+                    "series" -> com.fun.app.data.models.PlaylistMode.SERIES
+                    else -> com.fun.app.data.models.PlaylistMode.DISCOVER
+                }
+                com.fun.app.ui.screens.watch.WatchScreen(
+                    episodeId = episodeId,
+                    mode = mode,
+                    seriesId = seriesId,
+                    navController = navController
+                )
+            }
+            composable("series/{seriesId}") { backStackEntry ->
+                val seriesId = backStackEntry.arguments?.getString("seriesId") ?: ""
+                // SeriesDetailScreen(seriesId, navController)
+                Text("Series Detail: $seriesId", Modifier.padding(paddingValues))
+            }
         }
     }
 }
