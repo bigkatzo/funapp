@@ -445,6 +445,10 @@ export default function HomePage() {
         onShare={handleShare}
         onVideoEnd={handleVideoEnd}
         onSeriesTitleClick={handleSeriesTitleClick}
+        onNextEpisode={goToNextVideo}
+        onPrevEpisode={goToPrevVideo}
+        hasNext={currentIndex < episodes.length - 1}
+        hasPrevious={currentIndex > 0}
         currentPosition={{ current: currentIndex + 1, total: episodes.length }}
         autoPlay
       />

@@ -162,6 +162,53 @@ export function VerticalVideoPlayer({
     };
   }, [showControls, isPlaying]);
 
+  // Desktop hover detection - show controls on mouse movement
+  useEffect(() => {
+    let mouseIdleTimer: NodeJS.Timeout | null = null;
+    let lastMouseMoveTime = Date.now();
+
+    const handleMouseMove = () => {
+      const now = Date.now();
+      // Debounce: only update if >100ms since last move
+      if (now - lastMouseMoveTime < 100) return;
+      
+      lastMouseMoveTime = now;
+      
+      // Show controls on mouse movement
+      if (!showControls) {
+        setShowControls(true);
+      }
+      
+      // Clear existing timer
+      if (mouseIdleTimer) {
+        clearTimeout(mouseIdleTimer);
+      }
+      
+      // Hide controls after 3 seconds of no mouse movement (only when playing)
+      if (isPlaying) {
+        mouseIdleTimer = setTimeout(() => {
+          setShowControls(false);
+        }, 3000);
+      }
+    };
+
+    // Only add listener on desktop (devices with mouse)
+    const isDesktop = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    
+    if (isDesktop) {
+      window.addEventListener('mousemove', handleMouseMove);
+    }
+
+    return () => {
+      if (isDesktop) {
+        window.removeEventListener('mousemove', handleMouseMove);
+      }
+      if (mouseIdleTimer) {
+        clearTimeout(mouseIdleTimer);
+      }
+    };
+  }, [showControls, isPlaying]);
+
   const togglePlay = () => {
     const video = videoRef.current;
     if (!video) return;
@@ -529,11 +576,12 @@ export function VerticalVideoPlayer({
 
           {/* Episode navigation arrows */}
           {(hasNext || hasPrevious) && (
-            <div className="flex flex-col gap-2 mt-4 border-t border-white/20 pt-4">
+            <div className="flex flex-col gap-3 mt-4 border-t border-white/20 pt-4">
               {hasPrevious && onPrevEpisode && (
                 <button
                   onClick={onPrevEpisode}
-                  className="rounded-full bg-white/20 hover:bg-white/30 p-2 backdrop-blur-sm transition-colors"
+                  className="rounded-full bg-white/20 hover:bg-white/30 p-2.5 md:p-3 backdrop-blur-sm transition-colors"
+                  aria-label="Previous episode"
                 >
                   <ChevronUp className="h-6 w-6 text-white" />
                 </button>
@@ -541,7 +589,8 @@ export function VerticalVideoPlayer({
               {hasNext && onNextEpisode && (
                 <button
                   onClick={onNextEpisode}
-                  className="rounded-full bg-white/20 hover:bg-white/30 p-2 backdrop-blur-sm transition-colors animate-bounce"
+                  className="rounded-full bg-white/20 hover:bg-white/30 p-2.5 md:p-3 backdrop-blur-sm transition-colors animate-bounce"
+                  aria-label="Next episode"
                 >
                   <ChevronDown className="h-6 w-6 text-white" />
                 </button>
