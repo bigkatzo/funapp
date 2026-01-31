@@ -112,22 +112,24 @@ fun WatchScreen(
             )
         }
         
-        // Mode Badge
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(16.dp)
-        ) {
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = Color(0xFF9C27B0).copy(alpha = 0.8f)
+        // Mode Badge - Only show in Discover mode
+        if (mode == PlaylistMode.DISCOVER) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
             ) {
-                Text(
-                    text = "${mode.name.lowercase().replaceFirstChar { it.uppercase() }} Mode",
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.White
-                )
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFF9C27B0).copy(alpha = 0.8f)
+                ) {
+                    Text(
+                        text = "Discover Mode",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White
+                    )
+                }
             }
         }
     }

@@ -5,9 +5,12 @@
 package com.fun.app.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 
 private val DarkColorScheme = darkColorScheme(
@@ -34,6 +37,16 @@ fun FUNTheme(
     MaterialTheme(
         colorScheme = DarkColorScheme,
         typography = Typography,
-        content = content
+        content = {
+            // Disable text selection globally for TikTok-style interactions
+            CompositionLocalProvider(
+                LocalTextSelectionColors provides TextSelectionColors(
+                    handleColor = Color.Transparent,
+                    backgroundColor = Color.Transparent
+                )
+            ) {
+                content()
+            }
+        }
     )
 }

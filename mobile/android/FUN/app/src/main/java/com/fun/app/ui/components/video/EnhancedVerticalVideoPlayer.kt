@@ -6,8 +6,10 @@
 package com.fun.app.ui.components.video
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -15,6 +17,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -23,9 +27,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import coil.compose.AsyncImage
 import com.fun.app.data.models.Episode
 import com.fun.app.data.models.PlaylistContext
 import com.fun.app.data.models.Series
+import com.fun.app.ui.components.common.ShareIcon
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -57,6 +63,9 @@ fun EnhancedVerticalVideoPlayer(
     var isLongPressing by remember { mutableStateOf(false) }
     var speedLocked by remember { mutableStateOf(false) }
     var isUnlocking by remember { mutableStateOf(false) }
+    var isMuted by remember { mutableStateOf(false) }
+    var isSeeking by remember { mutableStateOf(false) }
+    var seekTime by remember { mutableStateOf(0L) }
     val coroutineScope = rememberCoroutineScope()
     var longPressJob: kotlinx.coroutines.Job? by remember { mutableStateOf(null) }
     var lockJob: kotlinx.coroutines.Job? by remember { mutableStateOf(null) }
@@ -296,28 +305,16 @@ fun EnhancedVerticalVideoPlayer(
                     .padding(16.dp)
                     .padding(bottom = 100.dp)
             ) {
-                // Seek slider
-                Slider(
-                    value = playerState.progress,
-                    onValueChange = { newProgress ->
-                        val newPosition = (playerState.duration * newProgress).toLong()
-                        exoPlayer.seekTo(newPosition)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = SliderDefaults.colors(
-                        thumbColor = Color.Red,
-                        activeTrackColor = Color.Red,
-                        inactiveTrackColor = Color.White.copy(alpha = 0.3f)
-                    )
-                )
-                
-                // Episode info - 2 lines max
+                // Episode info - 2 lines (moved above seek bar, clickable)
                 Column(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSeriesTitleTap() }
+                        .padding(bottom = 12.dp)
                 ) {
                     Text(
                         text = currentEpisode.title,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1
@@ -325,9 +322,52 @@ fun EnhancedVerticalVideoPlayer(
                     
                     Text(
                         text = "${series?.title ?: ""} • S${currentEpisode.seasonNumber}E${currentEpisode.episodeNumber}",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.8f),
                         maxLines = 1
+                    )
+                }
+                
+                // Seek slider with time bubble
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    // Time bubble (shows while seeking)
+                    if (isSeeking) {
+                        Text(
+                            text = formatTime(seekTime),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.Black,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .offset(
+                                    x = (300 * playerState.progress).dp,
+                                    y = (-40).dp
+                                )
+                                .background(Color.White, RoundedCornerShape(8.dp))
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                                .shadow(4.dp, RoundedCornerShape(8.dp))
+                        )
+                    }
+                    
+                    Slider(
+                        value = playerState.progress,
+                        onValueChange = { newProgress ->
+                            isSeeking = true
+                            val newPosition = (playerState.duration * newProgress).toLong()
+                            seekTime = newPosition
+                            // Real-time scrubbing
+                            exoPlayer.seekTo(newPosition)
+                        },
+                        onValueChangeFinished = {
+                            isSeeking = false
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp), // Larger touch target
+                        colors = SliderDefaults.colors(
+                            thumbColor = Color.White,
+                            activeTrackColor = Color.White,
+                            inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                        )
                     )
                 }
             }
@@ -339,36 +379,102 @@ fun EnhancedVerticalVideoPlayer(
                 .align(Alignment.CenterEnd)
                 .padding(end = 16.dp, bottom = 120.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            IconButton(onClick = { /* TODO: Like */ }) {
+            // Profile Bubble (TikTok-style)
+            series?.let {
+                Box(
+                    modifier = Modifier.size(48.dp),
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+                    AsyncImage(
+                        model = it.thumbnailUrl,
+                        contentDescription = "Series",
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .clickable { onSeriesTitleTap() }
+                    )
+                    
+                    // White border
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .then(Modifier.background(Color.Transparent))
+                    )
+                    
+                    // Plus icon overlay
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .offset(y = 8.dp)
+                            .background(Color.Red, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Follow",
+                            tint = Color.White,
+                            modifier = Modifier.size(12.dp)
+                        )
+                    }
+                }
+            }
+            
+            // Like - Minimalist (NO background)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.clickable { /* TODO: Like */ }
+            ) {
                 Icon(
                     imageVector = if (currentEpisode.isLiked == true) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     contentDescription = "Like",
                     tint = if (currentEpisode.isLiked == true) Color.Red else Color.White,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier
+                        .size(32.dp)
+                        .shadow(2.dp)
+                )
+                
+                Text(
+                    text = formatCount(currentEpisode.stats?.likes ?: 0),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
                 )
             }
             
-            IconButton(onClick = { /* TODO: Comment */ }) {
+            // Comment - Minimalist (NO background)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.clickable { /* TODO: Comment */ }
+            ) {
                 Icon(
                     imageVector = Icons.Default.Comment,
                     contentDescription = "Comment",
                     tint = Color.White,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier
+                        .size(32.dp)
+                        .shadow(2.dp)
+                )
+                
+                Text(
+                    text = formatCount(currentEpisode.stats?.comments ?: 0),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
                 )
             }
             
-            IconButton(onClick = { /* TODO: Share */ }) {
-                Icon(
-                    imageVector = Icons.Default.Share,
-                    contentDescription = "Share",
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
+            // Share - Modern curved arrow
+            ShareIcon(
+                onClick = { /* TODO: Share */ },
+                modifier = Modifier
+            )
             
-            // Navigation arrows
+            // Navigation arrows - Minimalist
             if (context.hasPrevious && onPrevEpisode != null) {
                 Divider(
                     modifier = Modifier
@@ -377,14 +483,15 @@ fun EnhancedVerticalVideoPlayer(
                     color = Color.White.copy(alpha = 0.3f)
                 )
                 
-                IconButton(onClick = onPrevEpisode) {
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowUp,
-                        contentDescription = "Previous",
-                        tint = Color.White,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowUp,
+                    contentDescription = "Previous",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .shadow(2.dp)
+                        .clickable { onPrevEpisode() }
+                )
             }
             
             if (context.hasNext && onNextEpisode != null) {
@@ -397,26 +504,29 @@ fun EnhancedVerticalVideoPlayer(
                     )
                 }
                 
-                IconButton(onClick = onNextEpisode) {
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Next",
-                        tint = Color.White,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = "Next",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .shadow(2.dp)
+                        .clickable { onNextEpisode() }
+                )
             }
         }
         
-        // Controls overlay - Only top bar when visible
+        // Controls overlay - Top bar with Back, Episode counter, Mute
         if (showControls) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.TopStart)
                     .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
+                // Left: Back button
                 IconButton(onClick = onBackClick) {
                     Icon(
                         imageVector = Icons.Default.ArrowBack,
@@ -425,25 +535,36 @@ fun EnhancedVerticalVideoPlayer(
                     )
                 }
                 
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(start = 8.dp)
+                // Right: Episode counter + Mute button
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(onClick = onSeriesTitleTap) {
+                    // Episode counter
+                    if (context.currentIndex > 0 && context.totalEpisodes > 0) {
                         Text(
-                            text = series?.title ?: currentEpisode.title,
-                            style = MaterialTheme.typography.titleSmall,
+                            text = "${context.currentIndex}/${context.totalEpisodes}",
+                            style = MaterialTheme.typography.labelSmall,
                             color = Color.White,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
-                    Text(
-                        text = "S${currentEpisode.seasonNumber}E${currentEpisode.episodeNumber}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.8f),
-                        modifier = Modifier.padding(start = 12.dp)
-                    )
+                    
+                    // Mute button (TikTok-style)
+                    IconButton(onClick = { 
+                        isMuted = !isMuted
+                        exoPlayer.volume = if (isMuted) 0f else 1f
+                    }) {
+                        Icon(
+                            imageVector = if (isMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                            contentDescription = if (isMuted) "Unmute" else "Mute",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
         }
@@ -488,4 +609,12 @@ private fun formatTime(millis: Long): String {
     val mins = seconds / 60
     val secs = seconds % 60
     return "$mins:${secs.toString().padStart(2, '0')}"
+}
+
+private fun formatCount(count: Int): String {
+    return when {
+        count >= 1_000_000 -> String.format("%.1fM", count / 1_000_000.0)
+        count >= 1_000 -> String.format("%.1fK", count / 1_000.0)
+        else -> count.toString()
+    }
 }
