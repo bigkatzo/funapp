@@ -149,50 +149,32 @@
   }
 }
 
-/* Custom seek slider styling - TikTok style */
+/* Custom seek slider styling - TikTok style (minimal) */
 .seek-slider {
   -webkit-appearance: none;
   appearance: none;
-  height: 3px;
-  border-radius: 2px;
+  height: 2px;
+  border-radius: 1px;
   outline: none;
 }
 
 .seek-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: #ef4444;
   cursor: pointer;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-  transition: transform 0.2s ease;
 }
 
 .seek-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: #ef4444;
   cursor: pointer;
   border: none;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-  transition: transform 0.2s ease;
-}
-
-.seek-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.3);
-}
-
-.seek-slider::-moz-range-thumb:hover {
-  transform: scale(1.3);
-}
-
-.seek-slider::-webkit-slider-thumb:active {
-  transform: scale(1.5);
-}
-
-.seek-slider::-moz-range-thumb:active {
-  transform: scale(1.5);
 }

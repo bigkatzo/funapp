@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Hls from 'hls.js';
-import { Play, Pause, Volume2, VolumeX, Maximize, Heart, MessageCircle, Share2, ArrowLeft, ChevronUp, ChevronDown } from 'lucide-react';
+import { Play, Heart, MessageCircle, Share2, ArrowLeft, ChevronUp, ChevronDown } from 'lucide-react';
 import { Episode, Series, PlaylistMode } from '@/types';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -323,13 +323,6 @@ export function VerticalVideoPlayer({
         onMouseLeave={handleTouchEnd}
       />
 
-      {/* Progress Bar - Top (non-interactive) */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-white/10 z-40 pointer-events-none">
-        <div
-          className="h-full bg-red-600 transition-all duration-100"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
 
       {/* Seek Animation Overlays (non-interactive) */}
       {showSeekAnimation === 'backward' && (
@@ -463,10 +456,10 @@ export function VerticalVideoPlayer({
           )}
         </div>
 
-        {/* Bottom Controls */}
-        <div className="absolute bottom-0 left-0 right-0 pb-20 z-40">
-          {/* Interactive Seek Bar - TikTok Style */}
-          <div className="px-4 pb-2 pointer-events-auto">
+        {/* Bottom Info - Only when controls visible */}
+        <div className="absolute bottom-0 left-0 right-0 pb-24 z-40">
+          {/* Interactive Seek Bar - Only visible with controls */}
+          <div className="px-4 pb-3 pointer-events-auto">
             <input
               type="range"
               min="0"
@@ -480,53 +473,12 @@ export function VerticalVideoPlayer({
             />
           </div>
           
-          {/* Episode Title & Description */}
-          <div className="px-4 mb-2 pointer-events-none">
-            <h3 className="text-white font-bold text-lg mb-1">{episode.title}</h3>
-            {episode.description && (
-              <p className="text-white/80 text-sm line-clamp-2">{episode.description}</p>
-            )}
-          </div>
-
-          {/* Controls Row */}
-          <div className="px-4 flex items-center gap-3 pointer-events-auto">
-            {/* Mute */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-white hover:bg-white/20 flex-shrink-0"
-              onClick={toggleMute}
-            >
-              {isMuted ? (
-                <VolumeX className="h-5 w-5" />
-              ) : (
-                <Volume2 className="h-5 w-5" />
-              )}
-            </Button>
-
-            {/* Time */}
-            <span className="text-white text-sm font-medium whitespace-nowrap pointer-events-none">
-              {formatTime(currentTime)} / {formatTime(duration)}
-            </span>
-
-            <div className="flex-1 pointer-events-none" />
-
-            {/* Episode counter */}
-            {currentPosition && (
-              <span className="text-white/80 text-sm whitespace-nowrap pointer-events-none">
-                {currentPosition.current}/{currentPosition.total}
-              </span>
-            )}
-
-            {/* Fullscreen */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-white hover:bg-white/20 flex-shrink-0"
-              onClick={toggleFullscreen}
-            >
-              <Maximize className="h-5 w-5" />
-            </Button>
+          {/* Episode Info - 2 lines max */}
+          <div className="px-4 pointer-events-none">
+            <h3 className="text-white font-bold text-base mb-0.5 truncate">{episode.title}</h3>
+            <p className="text-white/80 text-sm truncate">
+              {seriesTitle} • {episodeLabel}
+            </p>
           </div>
         </div>
       </div>

@@ -67,18 +67,6 @@ struct EnhancedVerticalVideoPlayer: View {
                     LockedEpisodeView(episode: currentEpisode)
                 }
                 
-                // Progress Bar - Top
-                VStack {
-                    if playerManager.duration > 0 {
-                        ProgressView(value: playerManager.progress, total: 1.0)
-                            .progressViewStyle(.linear)
-                            .tint(.red)
-                            .frame(height: 2)
-                    }
-                    Spacer()
-                }
-                .ignoresSafeArea()
-                
                 // Seek Animations
                 if let direction = showSeekAnimation {
                     seekAnimationView(direction: direction, geometry: geometry)
@@ -95,12 +83,77 @@ struct EnhancedVerticalVideoPlayer: View {
                         .cornerRadius(20)
                 }
                 
-                // Interactive Seek Bar at Bottom
+                // Social Actions & Navigation - Always Visible
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 20) {
+                            // Like
+                            socialButton(
+                                icon: (currentEpisode?.isLiked ?? false) ? "heart.fill" : "heart",
+                                count: currentEpisode?.stats.likes ?? 0,
+                                color: (currentEpisode?.isLiked ?? false) ? .red : .white,
+                                action: { /* Handle like */ }
+                            )
+                            
+                            // Comment
+                            socialButton(
+                                icon: "message.fill",
+                                count: currentEpisode?.stats.comments ?? 0,
+                                color: .white,
+                                action: { /* Handle comment */ }
+                            )
+                            
+                            // Share
+                            socialButton(
+                                icon: "square.and.arrow.up",
+                                count: nil,
+                                color: .white,
+                                action: { /* Handle share */ }
+                            )
+                            
+                            Divider()
+                                .background(Color.white.opacity(0.3))
+                                .frame(height: 1)
+                                .padding(.vertical, 8)
+                            
+                            // Navigation Arrows
+                            if context.hasPrevious, let onPrev = onPrevEpisode {
+                                Button(action: onPrev) {
+                                    Image(systemName: "chevron.up")
+                                        .font(.title2)
+                                        .foregroundColor(.white)
+                                        .frame(width: 40, height: 40)
+                                        .background(Color.white.opacity(0.2))
+                                        .clipShape(Circle())
+                                }
+                            }
+                            
+                            if context.hasNext, let onNext = onNextEpisode {
+                                Button(action: onNext) {
+                                    Image(systemName: "chevron.down")
+                                        .font(.title2)
+                                        .foregroundColor(.white)
+                                        .frame(width: 40, height: 40)
+                                        .background(Color.white.opacity(0.2))
+                                        .clipShape(Circle())
+                                }
+                            }
+                        }
+                        .padding(.trailing, 16)
+                        .padding(.bottom, 120)
+                    }
+                }
+                
+                // Interactive Seek Bar at Bottom - Only when controls shown
                 if showControls {
                     VStack {
                         Spacer()
-                        seekBarView()
-                            .padding(.bottom, geometry.safeAreaInsets.bottom + 80)
+                        VStack(spacing: 4) {
+                            seekBarView()
+                        }
+                        .padding(.bottom, 100)
                     }
                 }
                 
@@ -166,115 +219,7 @@ struct EnhancedVerticalVideoPlayer: View {
             
             Spacer()
             
-            // Bottom Controls
-            HStack(alignment: .bottom) {
-                // Left: Episode Info & Controls
-                VStack(alignment: .leading, spacing: 12) {
-                    if let episode = currentEpisode {
-                        Text(episode.title)
-                            .font(.headline.bold())
-                            .foregroundColor(.white)
-                            .lineLimit(2)
-                        
-                        if let description = episode.description {
-                            Text(description)
-                                .font(.subheadline)
-                                .foregroundColor(.white.opacity(0.9))
-                                .lineLimit(2)
-                        }
-                    }
-                    
-                    // Time & Controls
-                    HStack(spacing: 16) {
-                        Button(action: {
-                            playerManager.player?.isMuted.toggle()
-                        }) {
-                            Image(systemName: (playerManager.player?.isMuted ?? false) ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                                .font(.title3)
-                                .foregroundColor(.white)
-                        }
-                        
-                        Text("\(formatTime(playerManager.currentTime)) / \(formatTime(playerManager.duration))")
-                            .font(.caption.bold())
-                            .foregroundColor(.white)
-                        
-                        if let position = context.position {
-                            Text("\(position.current)/\(position.total)")
-                                .font(.caption)
-                                .foregroundColor(.white.opacity(0.8))
-                        }
-                        
-                        Spacer()
-                        
-                        Button(action: {
-                            // Fullscreen
-                        }) {
-                            Image(systemName: "arrow.up.left.and.arrow.down.right")
-                                .font(.title3)
-                                .foregroundColor(.white)
-                        }
-                    }
-                }
-                
-                Spacer()
-                
-                // Right: Social Actions
-                VStack(spacing: 20) {
-                    // Like
-                    socialButton(
-                        icon: (currentEpisode?.isLiked ?? false) ? "heart.fill" : "heart",
-                        count: currentEpisode?.stats.likes ?? 0,
-                        color: (currentEpisode?.isLiked ?? false) ? .red : .white,
-                        action: { /* Handle like */ }
-                    )
-                    
-                    // Comment
-                    socialButton(
-                        icon: "message.fill",
-                        count: currentEpisode?.stats.comments ?? 0,
-                        color: .white,
-                        action: { /* Handle comment */ }
-                    )
-                    
-                    // Share
-                    socialButton(
-                        icon: "square.and.arrow.up",
-                        count: nil,
-                        color: .white,
-                        action: { /* Handle share */ }
-                    )
-                    
-                    Divider()
-                        .background(Color.white.opacity(0.3))
-                        .frame(height: 1)
-                        .padding(.vertical, 8)
-                    
-                    // Navigation Arrows
-                    if context.hasPrevious, let onPrev = onPrevEpisode {
-                        Button(action: onPrev) {
-                            Image(systemName: "chevron.up")
-                                .font(.title2)
-                                .foregroundColor(.white)
-                                .frame(width: 40, height: 40)
-                                .background(Color.white.opacity(0.2))
-                                .clipShape(Circle())
-                        }
-                    }
-                    
-                    if context.hasNext, let onNext = onNextEpisode {
-                        Button(action: onNext) {
-                            Image(systemName: "chevron.down")
-                                .font(.title2)
-                                .foregroundColor(.white)
-                                .frame(width: 40, height: 40)
-                                .background(Color.white.opacity(0.2))
-                                .clipShape(Circle())
-                        }
-                    }
-                }
-            }
-            .padding()
-            .padding(.bottom, geometry.safeAreaInsets.bottom + 80) // Account for tab bar
+            // Right Side: Social Actions (always visible in parent view)
         }
     }
     
@@ -342,21 +287,21 @@ struct EnhancedVerticalVideoPlayer: View {
                     // Track background
                     Rectangle()
                         .fill(Color.white.opacity(0.3))
-                        .frame(height: 3)
-                        .cornerRadius(1.5)
+                        .frame(height: 2)
+                        .cornerRadius(1)
                     
                     // Progress fill
                     Rectangle()
                         .fill(Color.red)
-                        .frame(width: geometry.size.width * CGFloat(playerManager.progress), height: 3)
-                        .cornerRadius(1.5)
+                        .frame(width: geometry.size.width * CGFloat(playerManager.progress), height: 2)
+                        .cornerRadius(1)
                     
                     // Draggable thumb
                     Circle()
                         .fill(Color.red)
-                        .frame(width: 14, height: 14)
+                        .frame(width: 12, height: 12)
                         .shadow(color: .black.opacity(0.4), radius: 3, x: 0, y: 2)
-                        .offset(x: (geometry.size.width - 14) * CGFloat(playerManager.progress))
+                        .offset(x: (geometry.size.width - 12) * CGFloat(playerManager.progress))
                         .gesture(
                             DragGesture(minimumDistance: 0)
                                 .onChanged { value in
@@ -367,21 +312,21 @@ struct EnhancedVerticalVideoPlayer: View {
                         )
                 }
             }
-            .frame(height: 14)
+            .frame(height: 12)
             .padding(.horizontal, 16)
             
-            // Time and episode info
-            HStack {
-                Text("\(formatTime(playerManager.currentTime)) / \(formatTime(playerManager.duration))")
-                    .font(.caption.bold())
-                    .foregroundColor(.white)
-                
-                Spacer()
-                
-                if let position = context.position {
-                    Text("Ep \(position.current)/\(position.total)")
-                        .font(.caption)
+            // Episode info - 2 lines max
+            VStack(alignment: .leading, spacing: 2) {
+                if let episode = currentEpisode {
+                    Text(episode.title)
+                        .font(.body.bold())
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                    
+                    Text("\(series?.title ?? "") • S\(episode.seasonNumber)E\(episode.episodeNumber)")
+                        .font(.subheadline)
                         .foregroundColor(.white.opacity(0.8))
+                        .lineLimit(1)
                 }
             }
             .padding(.horizontal, 16)

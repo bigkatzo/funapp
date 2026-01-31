@@ -210,17 +210,6 @@ fun EnhancedVerticalVideoPlayer(
             }
         }
         
-        // Progress bar at top
-        LinearProgressIndicator(
-            progress = playerState.progress,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(2.dp)
-                .align(Alignment.TopCenter),
-            color = Color.Red,
-            trackColor = Color.White.copy(alpha = 0.3f)
-        )
-        
         // Seek animations
         if (showSeekAnimation == SeekDirection.BACKWARD) {
             Box(
@@ -298,14 +287,14 @@ fun EnhancedVerticalVideoPlayer(
             }
         }
         
-        // Interactive Seek Bar at Bottom
+        // Interactive Seek Bar at Bottom - Only when controls shown
         if (showControls) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
                     .padding(16.dp)
-                    .padding(bottom = 80.dp)
+                    .padding(bottom = 100.dp)
             ) {
                 // Seek slider
                 Slider(
@@ -322,56 +311,141 @@ fun EnhancedVerticalVideoPlayer(
                     )
                 )
                 
-                // Time and episode info
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                // Episode info - 2 lines max
+                Column(
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "${formatTime(playerState.currentPosition)} / ${formatTime(playerState.duration)}",
-                        style = MaterialTheme.typography.bodySmall,
+                        text = currentEpisode.title,
+                        style = MaterialTheme.typography.bodyLarge,
                         color = Color.White,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
                     )
                     
                     Text(
-                        text = "Ep ${context.currentIndex + 1}/${context.episodes.size}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.8f)
+                        text = "${series?.title ?: ""} • S${currentEpisode.seasonNumber}E${currentEpisode.episodeNumber}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.8f),
+                        maxLines = 1
                     )
                 }
             }
         }
         
-        // Controls overlay
+        // Social Actions & Navigation - Always Visible
+        Column(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 16.dp, bottom = 120.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            IconButton(onClick = { /* TODO: Like */ }) {
+                Icon(
+                    imageVector = if (currentEpisode.isLiked == true) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = "Like",
+                    tint = if (currentEpisode.isLiked == true) Color.Red else Color.White,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+            
+            IconButton(onClick = { /* TODO: Comment */ }) {
+                Icon(
+                    imageVector = Icons.Default.Comment,
+                    contentDescription = "Comment",
+                    tint = Color.White,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+            
+            IconButton(onClick = { /* TODO: Share */ }) {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = "Share",
+                    tint = Color.White,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+            
+            // Navigation arrows
+            if (context.hasPrevious && onPrevEpisode != null) {
+                Divider(
+                    modifier = Modifier
+                        .width(28.dp)
+                        .padding(vertical = 8.dp),
+                    color = Color.White.copy(alpha = 0.3f)
+                )
+                
+                IconButton(onClick = onPrevEpisode) {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowUp,
+                        contentDescription = "Previous",
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+            
+            if (context.hasNext && onNextEpisode != null) {
+                if (!context.hasPrevious) {
+                    Divider(
+                        modifier = Modifier
+                            .width(28.dp)
+                            .padding(vertical = 8.dp),
+                        color = Color.White.copy(alpha = 0.3f)
+                    )
+                }
+                
+                IconButton(onClick = onNextEpisode) {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Next",
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+        }
+        
+        // Controls overlay - Only top bar when visible
         if (showControls) {
-            VideoControlsOverlay(
-                episode = currentEpisode,
-                series = series,
-                isPlaying = playerState.isPlaying,
-                progress = playerState.progress,
-                currentPosition = playerState.currentPosition,
-                duration = playerState.duration,
-                episodeIndex = context.currentIndex + 1,
-                totalEpisodes = context.episodes.size,
-                hasNext = context.hasNext,
-                hasPrevious = context.hasPrevious,
-                onBackClick = onBackClick,
-                onSeriesTitleTap = onSeriesTitleTap,
-                onPlayPause = {
-                    if (playerState.isPlaying) {
-                        exoPlayer.pause()
-                    } else {
-                        exoPlayer.play()
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopStart)
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBackClick) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        tint = Color.White
+                    )
+                }
+                
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 8.dp)
+                ) {
+                    TextButton(onClick = onSeriesTitleTap) {
+                        Text(
+                            text = series?.title ?: currentEpisode.title,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
-                },
-                onNextEpisode = onNextEpisode,
-                onPrevEpisode = onPrevEpisode,
-                onLike = { /* TODO */ },
-                onComment = { /* TODO */ },
-                onShare = { /* TODO */ }
-            )
+                    Text(
+                        text = "S${currentEpisode.seasonNumber}E${currentEpisode.episodeNumber}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.8f),
+                        modifier = Modifier.padding(start = 12.dp)
+                    )
+                }
+            }
         }
         
         // Center play button when paused
@@ -405,175 +479,6 @@ fun EnhancedVerticalVideoPlayer(
     DisposableEffect(Unit) {
         onDispose {
             exoPlayer.release()
-        }
-    }
-}
-
-@Composable
-private fun VideoControlsOverlay(
-    episode: Episode,
-    series: Series?,
-    isPlaying: Boolean,
-    progress: Float,
-    currentPosition: Long,
-    duration: Long,
-    episodeIndex: Int,
-    totalEpisodes: Int,
-    hasNext: Boolean,
-    hasPrevious: Boolean,
-    onBackClick: () -> Unit,
-    onSeriesTitleTap: () -> Unit,
-    onPlayPause: () -> Unit,
-    onNextEpisode: (() -> Unit)?,
-    onPrevEpisode: (() -> Unit)?,
-    onLike: () -> Unit,
-    onComment: () -> Unit,
-    onShare: () -> Unit
-) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        // Top bar with back button and series info
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopStart)
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onBackClick) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Back",
-                    tint = Color.White
-                )
-            }
-            
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 8.dp)
-            ) {
-                TextButton(onClick = onSeriesTitleTap) {
-                    Text(
-                        text = series?.title ?: episode.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                Text(
-                    text = "S${episode.seasonNumber}E${episode.episodeNumber}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.8f),
-                    modifier = Modifier.padding(start = 12.dp)
-                )
-            }
-        }
-        
-        // Right side social actions
-        Column(
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = 16.dp, bottom = 100.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            IconButton(onClick = onLike) {
-                Icon(
-                    imageVector = if (episode.isLiked == true) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = "Like",
-                    tint = if (episode.isLiked == true) Color.Red else Color.White,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-            
-            IconButton(onClick = onComment) {
-                Icon(
-                    imageVector = Icons.Default.Comment,
-                    contentDescription = "Comment",
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-            
-            IconButton(onClick = onShare) {
-                Icon(
-                    imageVector = Icons.Default.Share,
-                    contentDescription = "Share",
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-            
-            // Navigation arrows
-            if (hasPrevious && onPrevEpisode != null) {
-                IconButton(onClick = onPrevEpisode) {
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowUp,
-                        contentDescription = "Previous",
-                        tint = Color.White,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-            }
-            
-            if (hasNext && onNextEpisode != null) {
-                IconButton(onClick = onNextEpisode) {
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Next",
-                        tint = Color.White,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-            }
-        }
-        
-        // Bottom info and controls
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomStart)
-                .padding(16.dp)
-                .padding(bottom = 80.dp)
-        ) {
-            Text(
-                text = episode.title,
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White,
-                fontWeight = FontWeight.Bold
-            )
-            
-            episode.description?.let { desc ->
-                Text(
-                    text = desc,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.8f),
-                    maxLines = 2,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "${formatTime(currentPosition)} / ${formatTime(duration)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White
-                )
-                
-                Spacer(modifier = Modifier.weight(1f))
-                
-                Text(
-                    text = "Ep $episodeIndex/$totalEpisodes",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.8f)
-                )
-            }
         }
     }
 }
