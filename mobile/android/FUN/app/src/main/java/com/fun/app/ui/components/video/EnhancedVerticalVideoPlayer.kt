@@ -55,7 +55,12 @@ fun EnhancedVerticalVideoPlayer(
     var showControls by remember { mutableStateOf(true) }
     var showSeekAnimation by remember { mutableStateOf<SeekDirection?>(null) }
     var isLongPressing by remember { mutableStateOf(false) }
+    var speedLocked by remember { mutableStateOf(false) }
+    var isUnlocking by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+    var longPressJob: kotlinx.coroutines.Job? by remember { mutableStateOf(null) }
+    var lockJob: kotlinx.coroutines.Job? by remember { mutableStateOf(null) }
+    var unlockJob: kotlinx.coroutines.Job? by remember { mutableStateOf(null) }
     
     // Auto-hide controls
     LaunchedEffect(showControls, playerState.isPlaying) {
@@ -94,18 +99,24 @@ fun EnhancedVerticalVideoPlayer(
                     .pointerInput(Unit) {
                         detectTapGestures(
                             onTap = { offset ->
-                                // Single tap toggles controls
-                                showControls = !showControls
+                                // Single tap now toggles play/pause
+                                if (playerState.isPlaying) {
+                                    exoPlayer.pause()
+                                } else {
+                                    exoPlayer.play()
+                                }
+                                // Also show controls briefly
+                                showControls = true
                             },
                             onDoubleTap = { offset ->
-                                // Double tap for seek or play/pause
+                                // Double tap for seek (5 seconds)
                                 val screenWidth = size.width.toFloat()
                                 
                                 when {
                                     offset.x < screenWidth / 3 -> {
-                                        // Left third - rewind 10s
+                                        // Left third - rewind 5s
                                         exoPlayer.seekTo(
-                                            (exoPlayer.currentPosition - 10000)
+                                            (exoPlayer.currentPosition - 5000)
                                                 .coerceAtLeast(0)
                                         )
                                         showSeekAnimation = SeekDirection.BACKWARD
@@ -115,9 +126,9 @@ fun EnhancedVerticalVideoPlayer(
                                         }
                                     }
                                     offset.x > screenWidth * 2 / 3 -> {
-                                        // Right third - forward 10s
+                                        // Right third - forward 5s
                                         exoPlayer.seekTo(
-                                            (exoPlayer.currentPosition + 10000)
+                                            (exoPlayer.currentPosition + 5000)
                                                 .coerceAtMost(exoPlayer.duration)
                                         )
                                         showSeekAnimation = SeekDirection.FORWARD
@@ -126,25 +137,46 @@ fun EnhancedVerticalVideoPlayer(
                                             showSeekAnimation = null
                                         }
                                     }
-                                    else -> {
-                                        // Center - toggle play/pause
-                                        if (playerState.isPlaying) {
-                                            exoPlayer.pause()
-                                        } else {
-                                            exoPlayer.play()
-                                        }
-                                    }
                                 }
                             },
                             onLongPress = {
-                                // Long press for 2x speed
-                                isLongPressing = true
-                                exoPlayer.setPlaybackSpeed(2.0f)
+                                if (speedLocked) {
+                                    // Start unlock process (2 seconds)
+                                    isUnlocking = true
+                                    unlockJob = coroutineScope.launch {
+                                        delay(2000)
+                                        speedLocked = false
+                                        isLongPressing = false
+                                        isUnlocking = false
+                                        exoPlayer.setPlaybackSpeed(1.0f)
+                                    }
+                                } else {
+                                    // Start 2x speed and begin lock timer
+                                    isLongPressing = true
+                                    exoPlayer.setPlaybackSpeed(2.0f)
+                                    
+                                    // Lock after 3 seconds
+                                    lockJob = coroutineScope.launch {
+                                        delay(3000)
+                                        speedLocked = true
+                                    }
+                                }
                             },
                             onPress = {
                                 tryAwaitRelease()
-                                // Released - back to normal speed
-                                if (isLongPressing) {
+                                // Cancel all timers
+                                longPressJob?.cancel()
+                                lockJob?.cancel()
+                                unlockJob?.cancel()
+                                
+                                // If was unlocking, cancel it
+                                if (isUnlocking) {
+                                    isUnlocking = false
+                                    return@detectTapGestures
+                                }
+                                
+                                // If not locked and was pressing, return to normal
+                                if (isLongPressing && !speedLocked) {
                                     isLongPressing = false
                                     exoPlayer.setPlaybackSpeed(1.0f)
                                 }
@@ -240,8 +272,8 @@ fun EnhancedVerticalVideoPlayer(
             }
         }
         
-        // Long press speed indicator
-        if (isLongPressing) {
+        // Speed indicator
+        if (isLongPressing || speedLocked || isUnlocking) {
             Box(
                 modifier = Modifier
                     .align(Alignment.Center),
@@ -252,11 +284,61 @@ fun EnhancedVerticalVideoPlayer(
                     color = Color.Black.copy(alpha = 0.7f)
                 ) {
                     Text(
-                        text = "2x Speed",
+                        text = when {
+                            isUnlocking -> "Unlocking..."
+                            speedLocked -> "2x Speed (Locked)"
+                            else -> "2x Speed"
+                        },
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
                         style = MaterialTheme.typography.titleLarge,
                         color = Color.White,
                         fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+        
+        // Interactive Seek Bar at Bottom
+        if (showControls) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp)
+                    .padding(bottom = 80.dp)
+            ) {
+                // Seek slider
+                Slider(
+                    value = playerState.progress,
+                    onValueChange = { newProgress ->
+                        val newPosition = (playerState.duration * newProgress).toLong()
+                        exoPlayer.seekTo(newPosition)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color.Red,
+                        activeTrackColor = Color.Red,
+                        inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                    )
+                )
+                
+                // Time and episode info
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${formatTime(playerState.currentPosition)} / ${formatTime(playerState.duration)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Text(
+                        text = "Ep ${context.currentIndex + 1}/${context.episodes.size}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.8f)
                     )
                 }
             }

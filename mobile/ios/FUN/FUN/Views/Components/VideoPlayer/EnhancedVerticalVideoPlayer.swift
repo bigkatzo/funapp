@@ -20,7 +20,11 @@ struct EnhancedVerticalVideoPlayer: View {
     @State private var showControls = true
     @State private var showSeekAnimation: SeekDirection? = nil
     @State private var isLongPressing = false
+    @State private var speedLocked = false
+    @State private var isUnlocking = false
     @State private var controlsTimer: Timer?
+    @State private var lockTimer: Timer?
+    @State private var unlockTimer: Timer?
     
     enum SeekDirection {
         case forward, backward
@@ -80,15 +84,24 @@ struct EnhancedVerticalVideoPlayer: View {
                     seekAnimationView(direction: direction, geometry: geometry)
                 }
                 
-                // Long Press Indicator
-                if isLongPressing {
-                    Text("2x Speed")
+                // Speed Indicator
+                if isLongPressing || speedLocked || isUnlocking {
+                    Text(speedIndicatorText)
                         .font(.title2.bold())
                         .foregroundColor(.white)
                         .padding(.horizontal, 24)
                         .padding(.vertical, 12)
                         .background(Color.black.opacity(0.7))
                         .cornerRadius(20)
+                }
+                
+                // Interactive Seek Bar at Bottom
+                if showControls {
+                    VStack {
+                        Spacer()
+                        seekBarView()
+                            .padding(.bottom, geometry.safeAreaInsets.bottom + 80)
+                    }
                 }
                 
                 // Controls Overlay
@@ -294,7 +307,7 @@ struct EnhancedVerticalVideoPlayer: View {
                 Spacer()
                     .frame(width: geometry.size.width / 3)
                 
-                Image(systemName: "gobackward.10")
+                Image(systemName: "gobackward.5")
                     .font(.system(size: 60))
                     .foregroundColor(.white)
                     .padding(20)
@@ -306,7 +319,7 @@ struct EnhancedVerticalVideoPlayer: View {
             } else {
                 Spacer()
                 
-                Image(systemName: "goforward.10")
+                Image(systemName: "goforward.5")
                     .font(.system(size: 60))
                     .foregroundColor(.white)
                     .padding(20)
@@ -320,11 +333,71 @@ struct EnhancedVerticalVideoPlayer: View {
         }
     }
     
+    @ViewBuilder
+    private func seekBarView() -> some View {
+        VStack(spacing: 8) {
+            // Interactive Seek Slider
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    // Track background
+                    Rectangle()
+                        .fill(Color.white.opacity(0.3))
+                        .frame(height: 3)
+                        .cornerRadius(1.5)
+                    
+                    // Progress fill
+                    Rectangle()
+                        .fill(Color.red)
+                        .frame(width: geometry.size.width * CGFloat(playerManager.progress), height: 3)
+                        .cornerRadius(1.5)
+                    
+                    // Draggable thumb
+                    Circle()
+                        .fill(Color.red)
+                        .frame(width: 14, height: 14)
+                        .shadow(color: .black.opacity(0.4), radius: 3, x: 0, y: 2)
+                        .offset(x: (geometry.size.width - 14) * CGFloat(playerManager.progress))
+                        .gesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { value in
+                                    let newProgress = max(0, min(1, value.location.x / geometry.size.width))
+                                    let newTime = playerManager.duration * newProgress
+                                    playerManager.seek(to: newTime)
+                                }
+                        )
+                }
+            }
+            .frame(height: 14)
+            .padding(.horizontal, 16)
+            
+            // Time and episode info
+            HStack {
+                Text("\(formatTime(playerManager.currentTime)) / \(formatTime(playerManager.duration))")
+                    .font(.caption.bold())
+                    .foregroundColor(.white)
+                
+                Spacer()
+                
+                if let position = context.position {
+                    Text("Ep \(position.current)/\(position.total)")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.8))
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+        .padding(.bottom, 4)
+    }
+    
     // MARK: - Gesture Handlers
     
     private func handleSingleTap() {
+        // Single tap now toggles play/pause
+        playerManager.togglePlayPause()
+        
+        // Also show controls briefly
         withAnimation {
-            showControls.toggle()
+            showControls = true
         }
         resetControlsTimer()
     }
@@ -334,12 +407,12 @@ struct EnhancedVerticalVideoPlayer: View {
         let rightThird = width * 2 / 3
         
         if location.x < leftThird {
-            // Rewind 10s
-            playerManager.seek(by: -10)
+            // Rewind 5s (changed from 10s)
+            playerManager.seek(by: -5)
             showSeekAnimation = .backward
         } else if location.x > rightThird {
-            // Forward 10s
-            playerManager.seek(by: 10)
+            // Forward 5s (changed from 10s)
+            playerManager.seek(by: 5)
             showSeekAnimation = .forward
         }
         
@@ -349,13 +422,53 @@ struct EnhancedVerticalVideoPlayer: View {
     }
     
     private func handleLongPress() {
-        isLongPressing = true
-        playerManager.setPlaybackRate(2.0)
+        if speedLocked {
+            // Start unlock process (2 seconds)
+            isUnlocking = true
+            unlockTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false) { _ in
+                speedLocked = false
+                isLongPressing = false
+                isUnlocking = false
+                playerManager.setPlaybackRate(1.0)
+            }
+        } else {
+            // Start 2x speed
+            isLongPressing = true
+            playerManager.setPlaybackRate(2.0)
+            
+            // Lock after 3 seconds of holding
+            lockTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { _ in
+                speedLocked = true
+            }
+        }
     }
     
     private func handleLongPressEnd() {
-        isLongPressing = false
-        playerManager.setPlaybackRate(1.0)
+        // Cancel timers
+        lockTimer?.invalidate()
+        unlockTimer?.invalidate()
+        
+        // If was unlocking, cancel it
+        if isUnlocking {
+            isUnlocking = false
+            return
+        }
+        
+        // If not locked, return to normal speed
+        if !speedLocked {
+            isLongPressing = false
+            playerManager.setPlaybackRate(1.0)
+        }
+    }
+    
+    private var speedIndicatorText: String {
+        if isUnlocking {
+            return "Unlocking..."
+        } else if speedLocked {
+            return "2x Speed (Locked)"
+        } else {
+            return "2x Speed"
+        }
     }
     
     private func resetControlsTimer() {
