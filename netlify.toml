@@ -9,8 +9,8 @@
   publish = ".next"
 
 [build.environment]
-  # Node version (Next.js 16 requires Node 18.17 or higher)
-  NODE_VERSION = "18.17.0"
+  # Node version (Next.js 16 requires Node 20.9.0 or higher)
+  NODE_VERSION = "20.9.0"
 
 # Next.js specific configuration
 [[plugins]]

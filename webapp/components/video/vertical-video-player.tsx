@@ -601,16 +601,18 @@ export function VerticalVideoPlayer({
 
         {/* Bottom Info - Reordered: Info First, Seek Below */}
         <div className="absolute bottom-0 left-0 right-0 pb-20 z-40 px-4">
-          {/* Episode Info First - Clickable */}
-          <button
-            onClick={onSeriesTitleClick}
-            className="pointer-events-auto mb-6 text-left w-full hover:opacity-80 transition-opacity"
-          >
-            <h3 className="text-white font-bold text-base mb-0.5 truncate">{episode.title}</h3>
-            <p className="text-white/80 text-sm truncate">
-              {seriesTitle} • {episodeLabel}
-            </p>
-          </button>
+          {/* Episode Info First - Clickable text only, not full width */}
+          <div className="mb-6 pointer-events-none">
+            <button
+              onClick={onSeriesTitleClick}
+              className="pointer-events-auto text-left hover:opacity-80 transition-opacity"
+            >
+              <h3 className="text-white font-bold text-base mb-0.5 truncate">{episode.title}</h3>
+              <p className="text-white/80 text-sm truncate">
+                {seriesTitle} • {episodeLabel}
+              </p>
+            </button>
+          </div>
           
           {/* Seek Bar with Larger Touch Target */}
           <div className="pointer-events-auto relative py-3 -my-3">
