@@ -469,10 +469,12 @@ export default function WatchPage() {
         />
       )}
 
-      {/* Mode Indicator */}
-      <div className="absolute top-4 right-4 z-40 bg-purple-600/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-semibold">
-        {mode.charAt(0).toUpperCase() + mode.slice(1)} Mode
-      </div>
+      {/* Mode Indicator - Only show for Discover Mode */}
+      {mode === 'discover' && (
+        <div className="absolute top-4 right-4 z-40 bg-purple-600/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-semibold">
+          Discover Mode
+        </div>
+      )}
     </div>
   );
 }

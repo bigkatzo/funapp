@@ -56,10 +56,15 @@ export function VerticalVideoPlayer({
   const [showSeekAnimation, setShowSeekAnimation] = useState<'forward' | 'backward' | null>(null);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [speedLocked, setSpeedLocked] = useState(false);
+  const [isSeekingHover, setIsSeekingHover] = useState(false);
+  const [isSeeking, setIsSeeking] = useState(false);
+  const [seekPosition, setSeekPosition] = useState(0);
+  const [seekTime, setSeekTime] = useState(0);
   const lastTapRef = useRef<number>(0);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lockTimerRef = useRef<NodeJS.Timeout | null>(null);
   const unlockTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const seekingRef = useRef(false);
   const [isLongPressing, setIsLongPressing] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -109,6 +114,9 @@ export function VerticalVideoPlayer({
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
     const handleTimeUpdate = () => {
+      // Don't update progress bar while user is actively seeking
+      if (seekingRef.current) return;
+      
       const progress = (video.currentTime / video.duration) * 100;
       setProgress(progress);
       setCurrentTime(video.currentTime);
@@ -289,6 +297,16 @@ export function VerticalVideoPlayer({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const formatCount = (count: number): string => {
+    if (count >= 1000000) {
+      return `${(count / 1000000).toFixed(1)}M`;
+    }
+    if (count >= 1000) {
+      return `${(count / 1000).toFixed(1)}K`;
+    }
+    return count.toString();
+  };
+
   const handleSeekBarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const video = videoRef.current;
     if (!video) return;
@@ -296,6 +314,33 @@ export function VerticalVideoPlayer({
     const newTime = (parseFloat(e.target.value) / 100) * video.duration;
     video.currentTime = newTime;
     setCurrentTime(newTime);
+  };
+
+  const handleSeekStart = () => {
+    setIsSeeking(true);
+    seekingRef.current = true;
+  };
+
+  const handleSeekEnd = () => {
+    setIsSeeking(false);
+    seekingRef.current = false;
+  };
+
+  const handleSeekBarInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const video = videoRef.current;
+    if (!video) return;
+    
+    const percentage = parseFloat(e.target.value);
+    const newTime = (percentage / 100) * video.duration;
+    
+    // Update states for UI - INCLUDING progress for visual feedback
+    setProgress(percentage);
+    setSeekPosition(percentage);
+    setSeekTime(newTime);
+    setCurrentTime(newTime);
+    
+    // Smooth scrubbing: update video time during drag
+    video.currentTime = newTime;
   };
 
   const seriesTitle = series?.title || episode.title;
@@ -362,26 +407,46 @@ export function VerticalVideoPlayer({
         )}
       >
         {/* Top Bar */}
-        <div className="absolute top-0 left-0 right-0 p-4 pt-safe flex items-start justify-between z-40">
-          {/* Left: Back button & Series info */}
-          <div className="flex-1 pointer-events-auto">
+        <div className="absolute top-0 left-0 right-0 p-4 pt-safe z-40">
+          <div className="flex items-start justify-between">
+            {/* Left: Back button only */}
             {onBackClick && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-white hover:bg-white/20 mb-2"
+                className="text-white hover:bg-white/20 pointer-events-auto"
                 onClick={onBackClick}
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             )}
-            <button
-              onClick={onSeriesTitleClick}
-              className="text-left hover:opacity-80 transition-opacity"
-            >
-              <h2 className="text-white text-sm font-semibold mb-0.5">{seriesTitle}</h2>
-              <p className="text-white/80 text-xs">{episodeLabel}</p>
-            </button>
+            
+            {/* Right: Episode counter + Mute button */}
+            <div className="flex items-center gap-2">
+              {currentPosition && (
+                <div className="text-white text-xs font-medium bg-black/30 px-2 py-1 rounded-full pointer-events-none">
+                  {currentPosition.current}/{currentPosition.total}
+                </div>
+              )}
+              
+              {/* Mute/Unmute Button - TikTok style */}
+              <button
+                onClick={toggleMute}
+                className="pointer-events-auto p-2 rounded-full hover:bg-white/20 transition-colors"
+                aria-label={isMuted ? "Unmute" : "Mute"}
+              >
+                {isMuted ? (
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                  </svg>
+                ) : (
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -394,43 +459,72 @@ export function VerticalVideoPlayer({
           </div>
         )}
 
-        {/* Right Side: Social Actions */}
-        <div className="absolute right-4 bottom-24 flex flex-col gap-4 z-40 pointer-events-auto">
+        {/* Right Side: Profile + Social Actions (TikTok Style) */}
+        <div className="absolute right-4 bottom-24 flex flex-col gap-6 z-40 pointer-events-auto">
+          {/* Series Profile Bubble - TikTok style */}
+          {series && onSeriesTitleClick && (
+            <button
+              onClick={onSeriesTitleClick}
+              className="flex flex-col items-center relative"
+            >
+              <div className="w-12 h-12 rounded-full border-2 border-white overflow-hidden bg-white/10">
+                <img
+                  src={series.thumbnailUrl || series.creator?.profileImage || 'https://api.dicebear.com/7.x/initials/svg?seed=' + series.title}
+                  alt={series.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              {/* Plus icon overlay like TikTok */}
+              <div className="absolute -bottom-2 bg-red-500 rounded-full p-1">
+                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" />
+                </svg>
+              </div>
+            </button>
+          )}
+          
+          {/* Like Button - Minimalist */}
           <button
             onClick={onLike}
             className="flex flex-col items-center gap-1"
           >
-            <div className={cn(
-              'rounded-full p-3 backdrop-blur-sm transition-colors',
-              episode.isLiked ? 'bg-red-500' : 'bg-white/20 hover:bg-white/30'
-            )}>
-              <Heart
-                className={cn(
-                  'h-7 w-7',
-                  episode.isLiked ? 'text-white fill-white' : 'text-white'
-                )}
-              />
-            </div>
-            <span className="text-white text-xs font-semibold">{episode.stats.likes}</span>
+            <Heart
+              className={cn(
+                'h-8 w-8 transition-all',
+                episode.isLiked 
+                  ? 'text-red-500 fill-red-500' 
+                  : 'text-white drop-shadow-lg'
+              )}
+              strokeWidth={1.5}
+            />
+            <span className="text-white text-xs font-semibold drop-shadow-lg">
+              {formatCount(episode.stats.likes)}
+            </span>
           </button>
 
+          {/* Comment Button - Minimalist */}
           <button
             onClick={onComment}
             className="flex flex-col items-center gap-1"
           >
-            <div className="rounded-full bg-white/20 hover:bg-white/30 p-3 backdrop-blur-sm transition-colors">
-              <MessageCircle className="h-7 w-7 text-white" />
-            </div>
-            <span className="text-white text-xs font-semibold">{episode.stats.comments}</span>
+            <MessageCircle
+              className="h-8 w-8 text-white drop-shadow-lg"
+              strokeWidth={1.5}
+            />
+            <span className="text-white text-xs font-semibold drop-shadow-lg">
+              {formatCount(episode.stats.comments)}
+            </span>
           </button>
 
+          {/* Share Button - Minimalist */}
           <button
             onClick={onShare}
             className="flex flex-col items-center gap-1"
           >
-            <div className="rounded-full bg-white/20 hover:bg-white/30 p-3 backdrop-blur-sm transition-colors">
-              <Share2 className="h-7 w-7 text-white" />
-            </div>
+            <Share2
+              className="h-8 w-8 text-white drop-shadow-lg"
+              strokeWidth={1.5}
+            />
           </button>
 
           {/* Episode navigation arrows */}
@@ -456,29 +550,57 @@ export function VerticalVideoPlayer({
           )}
         </div>
 
-        {/* Bottom Info - Only when controls visible */}
-        <div className="absolute bottom-0 left-0 right-0 pb-24 z-40">
-          {/* Interactive Seek Bar - Only visible with controls */}
-          <div className="px-4 pb-3 pointer-events-auto">
+        {/* Bottom Info - Reordered: Info First, Seek Below */}
+        <div className="absolute bottom-0 left-0 right-0 pb-20 z-40 px-4">
+          {/* Episode Info First - Clickable */}
+          <button
+            onClick={onSeriesTitleClick}
+            className="pointer-events-auto mb-6 text-left w-full hover:opacity-80 transition-opacity"
+          >
+            <h3 className="text-white font-bold text-base mb-0.5 truncate">{episode.title}</h3>
+            <p className="text-white/80 text-sm truncate">
+              {seriesTitle} • {episodeLabel}
+            </p>
+          </button>
+          
+          {/* Seek Bar with Larger Touch Target */}
+          <div className="pointer-events-auto relative py-3 -my-3">
+            {/* Time bubble follows thumb - TikTok style */}
+            {isSeeking && (
+              <div 
+                className="absolute -top-10 pointer-events-none z-50"
+                style={{
+                  left: `${seekPosition}%`,
+                  transform: 'translateX(-50%)'
+                }}
+              >
+                <div className="bg-white text-black px-2.5 py-1 rounded-md text-xs font-semibold shadow-lg">
+                  {formatTime(seekTime)}
+                </div>
+                {/* Small arrow pointing down */}
+                <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-white rotate-45"></div>
+              </div>
+            )}
+            
             <input
               type="range"
               min="0"
               max="100"
               value={isNaN(progress) ? 0 : progress}
+              onInput={handleSeekBarInput}
               onChange={handleSeekBarChange}
-              className="w-full h-1 bg-white/30 rounded-lg appearance-none cursor-pointer seek-slider"
+              onMouseDown={handleSeekStart}
+              onMouseUp={handleSeekEnd}
+              onTouchStart={handleSeekStart}
+              onTouchEnd={handleSeekEnd}
+              className={cn(
+                "w-full appearance-none cursor-pointer transition-all duration-200",
+                isSeeking ? "seek-slider-active" : "seek-slider"
+              )}
               style={{
-                background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${isNaN(progress) ? 0 : progress}%, rgba(255,255,255,0.3) ${isNaN(progress) ? 0 : progress}%, rgba(255,255,255,0.3) 100%)`
-              }}
+                '--progress': `${isNaN(progress) ? 0 : progress}%`
+              } as React.CSSProperties}
             />
-          </div>
-          
-          {/* Episode Info - 2 lines max */}
-          <div className="px-4 pointer-events-none">
-            <h3 className="text-white font-bold text-base mb-0.5 truncate">{episode.title}</h3>
-            <p className="text-white/80 text-sm truncate">
-              {seriesTitle} • {episodeLabel}
-            </p>
           </div>
         </div>
       </div>
