@@ -438,7 +438,7 @@ export default function HomePage() {
     <div className="h-screen overflow-hidden bg-black relative">
       <VerticalVideoPlayer
         episode={currentEpisode}
-        series={currentSeries}
+        series={currentSeries || undefined}
         mode="discover"
         onLike={handleLike}
         onComment={handleComment}
