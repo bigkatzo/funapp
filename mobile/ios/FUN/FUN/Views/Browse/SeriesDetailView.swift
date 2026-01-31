@@ -137,7 +137,38 @@ struct SeriesDetailView: View {
                 }
                 .padding()
                 
-                // Tabs
+                // Primary CTA - Play from Start
+                VStack(spacing: 12) {
+                    Button(action: {
+                        // Play first episode
+                        if let firstEpisode = series.seasons?.first?.episodes.first {
+                            // Navigate to player
+                        }
+                    }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "play.circle.fill")
+                                .font(.title3)
+                            Text("Play from Start")
+                                .font(.headline)
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            LinearGradient(
+                                colors: [Color.purple, Color.pink],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .cornerRadius(12)
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 8)
+                
+                Divider()
+                
                 Picker("", selection: $selectedTab) {
                     Text("Episodes (\(series.totalEpisodes))").tag(0)
                     Text("Details").tag(1)
@@ -162,7 +193,7 @@ struct SeriesDetailView: View {
     
     // MARK: - Episodes Tab
     var episodesTab: some View {
-        LazyVStack(spacing: 12) {
+        LazyVStack(spacing: 16) {
             if viewModel.isLoading {
                 ForEach(0..<5, id: \.self) { _ in
                     EpisodeCardSkeleton()
@@ -291,6 +322,39 @@ struct EpisodeCard: View {
                         Image(systemName: "lock.fill")
                             .foregroundColor(.white)
                             .font(.title2)
+                    }
+                    
+                    // Watch Progress Bar (at bottom of thumbnail)
+                    if let progress = episode.watchProgress, progress > 0, episode.progressPercent < 95 {
+                        VStack {
+                            Spacer()
+                            GeometryReader { geometry in
+                                ZStack(alignment: .leading) {
+                                    Rectangle()
+                                        .fill(Color.black.opacity(0.3))
+                                        .frame(height: 3)
+                                    Rectangle()
+                                        .fill(Color.purple)
+                                        .frame(width: geometry.size.width * CGFloat(episode.progressPercent / 100), height: 3)
+                                }
+                            }
+                            .frame(height: 3)
+                        }
+                    }
+                    
+                    // Completed Checkmark
+                    if episode.isWatched == true || episode.progressPercent >= 95 {
+                        VStack {
+                            HStack {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                                    .background(Circle().fill(Color.white).padding(2))
+                                    .font(.caption)
+                                    .padding(6)
+                                Spacer()
+                            }
+                            Spacer()
+                        }
                     }
                 }
                 .cornerRadius(8)

@@ -162,7 +162,7 @@ export default function SeriesDetailPage() {
       </div>
 
       {/* Cover Image with Gradient Overlay */}
-      <div className="relative h-72 md:h-96">
+      <div className="relative h-56 sm:h-72 md:h-96">
         <img
           src={series.coverImageUrl || series.thumbnailUrl}
           alt={series.title}
@@ -196,18 +196,18 @@ export default function SeriesDetailPage() {
       </div>
 
       {/* Content */}
-      <div className="p-6 -mt-8 relative z-10">
+      <div className="p-4 sm:p-6 mt-4 relative z-10">
         {/* Primary CTAs */}
         <Card className="mb-6 bg-white/95 backdrop-blur-sm shadow-xl">
           <CardContent className="pt-6">
-            <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3 mb-4">
               {/* Play from Start */}
               <Button
                 size="lg"
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white h-14 text-lg font-semibold"
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white h-12 sm:h-14 text-base sm:text-lg font-semibold"
                 onClick={handlePlayFromStart}
               >
-                <PlayCircle className="mr-2 h-6 w-6" />
+                <PlayCircle className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
                 Play from Start
               </Button>
 
@@ -216,10 +216,10 @@ export default function SeriesDetailPage() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="w-full h-14 text-lg font-semibold border-2 border-purple-600 text-purple-600 hover:bg-purple-50"
+                  className="w-full h-12 sm:h-14 text-base sm:text-lg font-semibold border-2 border-purple-600 text-purple-600 hover:bg-purple-50"
                   onClick={handleContinueWatching}
                 >
-                  <Clock className="mr-2 h-6 w-6" />
+                  <Clock className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
                   Continue S{continueInfo.seasonNumber}E{continueInfo.episodeNumber}
                 </Button>
               )}
@@ -268,8 +268,8 @@ export default function SeriesDetailPage() {
         )}
 
         {/* Episodes List */}
-        <div className="space-y-3">
-          <h3 className="text-xl font-bold mb-4">
+        <div className="space-y-3 mt-6">
+          <h3 className="text-lg sm:text-xl font-bold mb-4">
             {currentSeasonData?.title || `Season ${currentSeason}`} Episodes
           </h3>
           
@@ -289,13 +289,13 @@ export default function SeriesDetailPage() {
                 onClick={() => handleEpisodeClick(episode)}
               >
                 <CardContent className="p-0">
-                  <div className="flex gap-4">
+                  <div className="flex gap-3 sm:gap-4">
                     {/* Thumbnail */}
-                    <div className="relative w-40 flex-shrink-0">
+                    <div className="relative w-28 sm:w-40 flex-shrink-0">
                       <img
                         src={episode.thumbnailUrl}
                         alt={episode.title}
-                        className="w-full h-24 object-cover"
+                        className="w-full h-20 sm:h-24 object-cover"
                       />
                       
                       {/* Status Overlays */}
@@ -328,21 +328,21 @@ export default function SeriesDetailPage() {
                     </div>
                     
                     {/* Episode Info */}
-                    <div className="flex-1 py-3 pr-4">
+                    <div className="flex-1 py-2 sm:py-3 pr-3 sm:pr-4">
                       <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-semibold line-clamp-1">{episode.title}</h4>
+                            <h4 className="text-sm sm:text-base font-semibold line-clamp-1">{episode.title}</h4>
                             {isCurrentlyWatching && (
                               <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-600">
                                 Continue
                               </Badge>
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                          <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mb-2">
                             {episode.description}
                           </p>
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-2 sm:gap-3 text-xs text-muted-foreground">
                             <div className="flex items-center gap-1">
                               <Eye className="h-3 w-3" />
                               {(episode.stats.views / 1000).toFixed(1)}K

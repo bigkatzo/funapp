@@ -239,6 +239,46 @@ fun SeriesDetailScreen(
                     }
                 }
 
+                // Primary CTA - Play from Start
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                // Play first episode
+                                uiState.series?.seasons?.firstOrNull()?.episodes?.firstOrNull()?.let { firstEp ->
+                                    navController.navigate("player/${firstEp._id}")
+                                }
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(56.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Brush.horizontalGradient(
+                                    colors = listOf(
+                                        Color(0xFF9333EA), // purple-600
+                                        Color(0xFFDB2777)  // pink-600
+                                    )
+                                ).asVerticalGradient().start
+                            )
+                        ) {
+                            Icon(
+                                Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Play from Start", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                HorizontalDivider()
+
                 // Tabs
                 item {
                     TabRow(
@@ -344,7 +384,7 @@ fun EpisodeCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -382,6 +422,44 @@ fun EpisodeCard(
                             modifier = Modifier.size(32.dp)
                         )
                     }
+                }
+                
+                // Watch Progress Bar
+                episode.watchProgress?.let { progress ->
+                    if (progress > 0 && episode.progressPercent < 95) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .fillMaxWidth()
+                                .height(3.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.3f))
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .fillMaxWidth(fraction = (episode.progressPercent / 100).toFloat())
+                                    .background(MaterialTheme.colorScheme.primary)
+                            )
+                        }
+                    }
+                }
+                
+                // Completed Checkmark
+                if (episode.isWatched || episode.progressPercent >= 95) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = "Watched",
+                        tint = Color(0xFF10B981), // green-500
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(6.dp)
+                            .size(16.dp)
+                            .background(Color.White, CircleShape)
+                    )
                 }
             }
 

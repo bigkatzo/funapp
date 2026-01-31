@@ -168,7 +168,7 @@ export default function BrowsePage() {
 
       {/* Series Grid */}
       <div className="p-4">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
           {filteredSeries.map((series) => (
             <Link key={series._id} href={`/series/${series._id}`}>
               <Card className="overflow-hidden hover:shadow-xl transition-shadow cursor-pointer group">

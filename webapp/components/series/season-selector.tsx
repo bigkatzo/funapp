@@ -32,7 +32,7 @@ export function SeasonSelector({
       {/* Selected Season Button */}
       <Button
         variant="outline"
-        className="w-full justify-between text-left font-semibold"
+        className="w-full justify-between text-left font-semibold h-12 px-4"
         onClick={() => setIsOpen(!isOpen)}
       >
         <span>
