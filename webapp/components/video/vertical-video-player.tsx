@@ -55,10 +55,15 @@ export function VerticalVideoPlayer({
   const [currentTime, setCurrentTime] = useState(0);
   const [showSeekAnimation, setShowSeekAnimation] = useState<'forward' | 'backward' | null>(null);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [speedLocked, setSpeedLocked] = useState(false);
   const lastTapRef = useRef<number>(0);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lockTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const unlockTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isLongPressing, setIsLongPressing] = useState(false);
+  const [isUnlocking, setIsUnlocking] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [duration, setDuration] = useState(0);
 
   // Initialize video player
   useEffect(() => {
@@ -108,6 +113,9 @@ export function VerticalVideoPlayer({
       setProgress(progress);
       setCurrentTime(video.currentTime);
     };
+    const handleLoadedMetadata = () => {
+      setDuration(video.duration);
+    };
     const handleEnded = () => {
       setIsPlaying(false);
       onVideoEnd?.();
@@ -116,12 +124,14 @@ export function VerticalVideoPlayer({
     video.addEventListener('play', handlePlay);
     video.addEventListener('pause', handlePause);
     video.addEventListener('timeupdate', handleTimeUpdate);
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
     video.addEventListener('ended', handleEnded);
 
     return () => {
       video.removeEventListener('play', handlePlay);
       video.removeEventListener('pause', handlePause);
       video.removeEventListener('timeupdate', handleTimeUpdate);
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
       video.removeEventListener('ended', handleEnded);
     };
   }, [onVideoEnd]);
@@ -188,27 +198,25 @@ export function VerticalVideoPlayer({
       if (!video) return;
       
       if (x < width / 3) {
-        // Double tap left side - rewind 10s
-        video.currentTime = Math.max(0, video.currentTime - 10);
+        // Double tap left side - rewind 5s
+        video.currentTime = Math.max(0, video.currentTime - 5);
         setShowSeekAnimation('backward');
         setTimeout(() => setShowSeekAnimation(null), 500);
       } else if (x > (width * 2) / 3) {
-        // Double tap right side - forward 10s
-        video.currentTime = Math.min(video.duration, video.currentTime + 10);
+        // Double tap right side - forward 5s
+        video.currentTime = Math.min(video.duration, video.currentTime + 5);
         setShowSeekAnimation('forward');
         setTimeout(() => setShowSeekAnimation(null), 500);
-      } else {
-        // Double tap center - toggle play
-        togglePlay();
       }
       
       lastTapRef.current = 0; // Reset to prevent triple tap
     } else {
-      // Single tap - show controls
+      // Single tap - toggle play/pause
       lastTapRef.current = now;
       setTimeout(() => {
         if (lastTapRef.current === now) {
           // Confirmed single tap (no double tap followed)
+          togglePlay();
           setShowControls(true);
         }
       }, 300);
@@ -216,22 +224,58 @@ export function VerticalVideoPlayer({
   };
 
   const handleTouchStart = () => {
-    // Long press detection
-    longPressTimerRef.current = setTimeout(() => {
-      setIsLongPressing(true);
-      setPlaybackSpeed(2);
-      const video = videoRef.current;
-      if (video) video.playbackRate = 2;
-    }, 500);
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (speedLocked) {
+      // If speed is locked, start unlock timer (2 seconds)
+      setIsUnlocking(true);
+      unlockTimerRef.current = setTimeout(() => {
+        // Unlock after 2 seconds
+        setSpeedLocked(false);
+        setPlaybackSpeed(1);
+        video.playbackRate = 1;
+        setIsUnlocking(false);
+        setIsLongPressing(false);
+      }, 2000);
+    } else {
+      // Start 2x speed after 500ms
+      longPressTimerRef.current = setTimeout(() => {
+        setIsLongPressing(true);
+        setPlaybackSpeed(2);
+        video.playbackRate = 2;
+        
+        // After 3 seconds of holding, lock the speed
+        lockTimerRef.current = setTimeout(() => {
+          setSpeedLocked(true);
+        }, 3000);
+      }, 500);
+    }
   };
 
   const handleTouchEnd = () => {
-    // Cancel long press
+    // Clear all timers
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
-    if (isLongPressing) {
+    if (lockTimerRef.current) {
+      clearTimeout(lockTimerRef.current);
+      lockTimerRef.current = null;
+    }
+    if (unlockTimerRef.current) {
+      clearTimeout(unlockTimerRef.current);
+      unlockTimerRef.current = null;
+    }
+    
+    // If was unlocking, cancel it
+    if (isUnlocking) {
+      setIsUnlocking(false);
+      return;
+    }
+    
+    // If speed is not locked and was pressing, return to normal
+    if (isLongPressing && !speedLocked) {
       setIsLongPressing(false);
       setPlaybackSpeed(1);
       const video = videoRef.current;
@@ -243,6 +287,15 @@ export function VerticalVideoPlayer({
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleSeekBarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const video = videoRef.current;
+    if (!video) return;
+    
+    const newTime = (parseFloat(e.target.value) / 100) * video.duration;
+    video.currentTime = newTime;
+    setCurrentTime(newTime);
   };
 
   const seriesTitle = series?.title || episode.title;
@@ -300,10 +353,10 @@ export function VerticalVideoPlayer({
       )}
 
       {/* Long Press Speed Indicator (non-interactive) */}
-      {isLongPressing && (
+      {(isLongPressing || speedLocked || isUnlocking) && (
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-30">
           <div className="bg-black/70 backdrop-blur-md rounded-full px-6 py-3 text-white font-bold text-xl">
-            2x Speed
+            {isUnlocking ? 'Unlocking...' : speedLocked ? '2x Speed (Locked)' : '2x Speed'}
           </div>
         </div>
       )}
@@ -411,9 +464,24 @@ export function VerticalVideoPlayer({
         </div>
 
         {/* Bottom Controls */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 pb-20 z-40 pointer-events-auto">
+        <div className="absolute bottom-0 left-0 right-0 pb-20 z-40">
+          {/* Interactive Seek Bar - TikTok Style */}
+          <div className="px-4 pb-2 pointer-events-auto">
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={progress}
+              onChange={handleSeekBarChange}
+              className="w-full h-1 bg-white/30 rounded-lg appearance-none cursor-pointer seek-slider"
+              style={{
+                background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${progress}%, rgba(255,255,255,0.3) ${progress}%, rgba(255,255,255,0.3) 100%)`
+              }}
+            />
+          </div>
+          
           {/* Episode Title & Description */}
-          <div className="mb-4 pointer-events-none">
+          <div className="px-4 mb-2 pointer-events-none">
             <h3 className="text-white font-bold text-lg mb-1">{episode.title}</h3>
             {episode.description && (
               <p className="text-white/80 text-sm line-clamp-2">{episode.description}</p>
@@ -421,7 +489,7 @@ export function VerticalVideoPlayer({
           </div>
 
           {/* Controls Row */}
-          <div className="flex items-center gap-3">
+          <div className="px-4 flex items-center gap-3 pointer-events-auto">
             {/* Mute */}
             <Button
               variant="ghost"
@@ -438,7 +506,7 @@ export function VerticalVideoPlayer({
 
             {/* Time */}
             <span className="text-white text-sm font-medium whitespace-nowrap pointer-events-none">
-              {formatTime(currentTime)} / {formatTime(episode.duration)}
+              {formatTime(currentTime)} / {formatTime(duration)}
             </span>
 
             <div className="flex-1 pointer-events-none" />
