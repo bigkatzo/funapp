@@ -331,7 +331,9 @@ export default function HomePage() {
 
   const handleSeriesTitleClick = () => {
     const currentEpisode = episodes[currentIndex];
-    router.push(`/series/${currentEpisode.seriesId}`);
+    if (currentEpisode) {
+      router.push(`/series/${currentEpisode.seriesId}`);
+    }
   };
 
   // Handle scroll/swipe for next/prev video
@@ -418,7 +420,19 @@ export default function HomePage() {
   }
 
   const currentEpisode = episodes[currentIndex];
-  const currentSeries = allSeries.find(s => s._id === currentEpisode.seriesId);
+  const currentSeries = currentEpisode ? allSeries.find(s => s._id === currentEpisode.seriesId) : null;
+
+  if (!currentEpisode) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-black">
+        <p className="text-white text-center">
+          No videos available.
+          <br />
+          Check back soon!
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen overflow-hidden bg-black relative">
