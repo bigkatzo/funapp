@@ -267,3 +267,21 @@ struct SlideInModifier: ViewModifier {
             }
     }
 }
+
+// MARK: - Touch Optimization (TikTok-style)
+
+extension View {
+    /// Prevent text selection and improve touch responsiveness
+    func disableTextSelection() -> some View {
+        self
+            .textSelection(.disabled)
+            .allowsHitTesting(true)
+    }
+    
+    /// Optimize for TikTok-style video interactions
+    func optimizeForVideoGestures() -> some View {
+        self
+            .contentShape(Rectangle())
+            .simultaneousGesture(TapGesture(count: 0))
+    }
+}

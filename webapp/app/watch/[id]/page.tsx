@@ -412,7 +412,7 @@ export default function WatchPage() {
   }
 
   return (
-    <div className="h-screen overflow-hidden bg-black relative">
+    <div className="h-screen-mobile overflow-hidden bg-black relative">
       {/* Video Player */}
       <VerticalVideoPlayer
         episode={currentEpisode}

@@ -54,5 +54,9 @@ struct FUNApp: App {
         
         UITabBar.appearance().standardAppearance = tabBarAppearance
         UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
+        
+        // Disable text selection globally for TikTok-style interactions
+        UITextView.appearance().isSelectable = false
+        UITextField.appearance().tintColor = UIColor(Colors.primary)
     }
 }

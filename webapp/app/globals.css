@@ -79,6 +79,18 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  
+  /* Mobile-first viewport height handling */
+  --vh: 100dvh;
+  --vh-mobile: calc(100dvh - 64px); /* Account for bottom nav */
+}
+
+/* Fallback for older browsers */
+@supports not (height: 100dvh) {
+  :root {
+    --vh: 100vh;
+    --vh-mobile: calc(100vh - 64px);
+  }
 }
 
 .dark {
@@ -118,9 +130,42 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    
+    /* Prevent text selection on all elements - TikTok behavior */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    
+    /* Prevent tap highlight on mobile */
+    -webkit-tap-highlight-color: transparent;
+    
+    /* Prevent long-press callout menu on iOS */
+    -webkit-touch-callout: none;
+    
+    /* Improve touch scrolling */
+    -webkit-overflow-scrolling: touch;
   }
+  
+  /* Allow selection only for input fields */
+  input, textarea {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+  
+  /* Optimize touch interactions - prevent double-tap zoom */
+  button, a, [role="button"] {
+    touch-action: manipulation;
+  }
+  
   body {
     @apply bg-background text-foreground;
+    
+    /* Prevent pull-to-refresh on mobile */
+    overscroll-behavior-y: none;
+    touch-action: pan-x pan-y;
   }
 }
 
@@ -213,4 +258,17 @@
   width: 14px;
   height: 14px;
   box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.3), 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* Mobile-first viewport height utilities */
+.h-screen-mobile {
+  height: var(--vh-mobile);
+  min-height: var(--vh-mobile);
+  max-height: var(--vh-mobile);
+}
+
+.h-screen-dynamic {
+  height: var(--vh);
+  min-height: var(--vh);
+  max-height: var(--vh);
 }

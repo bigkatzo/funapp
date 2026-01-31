@@ -25,6 +25,9 @@ struct EnhancedVerticalVideoPlayer: View {
     @State private var controlsTimer: Timer?
     @State private var lockTimer: Timer?
     @State private var unlockTimer: Timer?
+    @State private var isMuted = false
+    @State private var isSeeking = false
+    @State private var seekTime: Double = 0
     
     enum SeekDirection {
         case forward, backward
@@ -88,28 +91,59 @@ struct EnhancedVerticalVideoPlayer: View {
                     Spacer()
                     HStack {
                         Spacer()
-                        VStack(spacing: 20) {
-                            // Like
-                            socialButton(
+                        VStack(spacing: 24) {
+                            // Series Profile Bubble (TikTok-style)
+                            if let series = series {
+                                Button(action: onSeriesTitleTap) {
+                                    ZStack(alignment: .bottom) {
+                                        // Profile circle
+                                        AsyncImage(url: URL(string: series.thumbnailUrl)) { image in
+                                            image
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                        } placeholder: {
+                                            Color.purple
+                                        }
+                                        .frame(width: 48, height: 48)
+                                        .clipShape(Circle())
+                                        .overlay(
+                                            Circle()
+                                                .stroke(Color.white, lineWidth: 2)
+                                        )
+                                        
+                                        // Plus icon overlay
+                                        Circle()
+                                            .fill(Color.red)
+                                            .frame(width: 20, height: 20)
+                                            .overlay(
+                                                Image(systemName: "plus")
+                                                    .font(.system(size: 12, weight: .bold))
+                                                    .foregroundColor(.white)
+                                            )
+                                            .offset(y: 8)
+                                    }
+                                }
+                            }
+                            
+                            // Like - Minimalist (no background)
+                            minimalistButton(
                                 icon: (currentEpisode?.isLiked ?? false) ? "heart.fill" : "heart",
                                 count: currentEpisode?.stats.likes ?? 0,
                                 color: (currentEpisode?.isLiked ?? false) ? .red : .white,
                                 action: { /* Handle like */ }
                             )
                             
-                            // Comment
-                            socialButton(
+                            // Comment - Minimalist (no background)
+                            minimalistButton(
                                 icon: "message.fill",
                                 count: currentEpisode?.stats.comments ?? 0,
                                 color: .white,
                                 action: { /* Handle comment */ }
                             )
                             
-                            // Share
-                            socialButton(
-                                icon: "square.and.arrow.up",
+                            // Share - Modern curved arrow
+                            minimalistShareButton(
                                 count: nil,
-                                color: .white,
                                 action: { /* Handle share */ }
                             )
                             
@@ -118,26 +152,24 @@ struct EnhancedVerticalVideoPlayer: View {
                                 .frame(height: 1)
                                 .padding(.vertical, 8)
                             
-                            // Navigation Arrows
+                            // Navigation Arrows - Minimalist
                             if context.hasPrevious, let onPrev = onPrevEpisode {
                                 Button(action: onPrev) {
                                     Image(systemName: "chevron.up")
-                                        .font(.title2)
+                                        .font(.system(size: 28, weight: .light))
                                         .foregroundColor(.white)
-                                        .frame(width: 40, height: 40)
-                                        .background(Color.white.opacity(0.2))
-                                        .clipShape(Circle())
+                                        .shadow(radius: 2)
+                                        .frame(width: 44, height: 44)
                                 }
                             }
                             
                             if context.hasNext, let onNext = onNextEpisode {
                                 Button(action: onNext) {
                                     Image(systemName: "chevron.down")
-                                        .font(.title2)
+                                        .font(.system(size: 28, weight: .light))
                                         .foregroundColor(.white)
-                                        .frame(width: 40, height: 40)
-                                        .background(Color.white.opacity(0.2))
-                                        .clipShape(Circle())
+                                        .shadow(radius: 2)
+                                        .frame(width: 44, height: 44)
                                 }
                             }
                         }
@@ -184,9 +216,9 @@ struct EnhancedVerticalVideoPlayer: View {
     @ViewBuilder
     private func controlsOverlay(geometry: GeometryProxy) -> some View {
         VStack {
-            // Top Bar
-            HStack {
-                // Back Button
+            // Top Bar - Restructured (Back left, Episode counter + Mute right)
+            HStack(alignment: .top) {
+                // Left: Back button
                 Button(action: onBackClick) {
                     Image(systemName: "chevron.left")
                         .font(.title3)
@@ -196,50 +228,119 @@ struct EnhancedVerticalVideoPlayer: View {
                         .clipShape(Circle())
                 }
                 
-                // Series Title
-                Button(action: onSeriesTitleTap) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(series?.title ?? currentEpisode?.title ?? "")
-                            .font(.subheadline.bold())
+                Spacer()
+                
+                // Right: Episode counter + Mute button
+                HStack(spacing: 12) {
+                    // Episode counter
+                    if context.currentIndex > 0 && context.totalEpisodes > 0 {
+                        Text("\(context.currentIndex)/\(context.totalEpisodes)")
+                            .font(.caption.bold())
                             .foregroundColor(.white)
-                            .lineLimit(1)
-                        
-                        if let episode = currentEpisode {
-                            Text("S\(episode.seasonNumber)E\(episode.episodeNumber)")
-                                .font(.caption)
-                                .foregroundColor(.white.opacity(0.8))
-                        }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.black.opacity(0.3))
+                            .cornerRadius(12)
+                    }
+                    
+                    // Mute button (TikTok-style)
+                    Button(action: {
+                        isMuted.toggle()
+                        playerManager.player?.isMuted = isMuted
+                    }) {
+                        Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(.white)
+                            .frame(width: 44, height: 44)
+                            .background(Color.black.opacity(0.2))
+                            .clipShape(Circle())
                     }
                 }
-                
-                Spacer()
             }
             .padding()
             .padding(.top, geometry.safeAreaInsets.top)
             
             Spacer()
             
-            // Right Side: Social Actions (always visible in parent view)
+            // Episode details at bottom (clickable)
+            VStack(alignment: .leading, spacing: 4) {
+                Button(action: onSeriesTitleTap) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(currentEpisode?.title ?? "")
+                            .font(.subheadline.bold())
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                        
+                        Text("\(series?.title ?? "") • S\(currentEpisode?.seasonNumber ?? 1)E\(currentEpisode?.episodeNumber ?? 1)")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.8))
+                            .lineLimit(1)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 120)
         }
     }
     
     // MARK: - Helper Views
     
+    // Minimalist button with NO background (TikTok-style)
     @ViewBuilder
-    private func socialButton(icon: String, count: Int?, color: Color, action: @escaping () -> Void) -> some View {
+    private func minimalistButton(icon: String, count: Int, color: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 4) {
                 Image(systemName: icon)
-                    .font(.title2)
+                    .font(.system(size: 32, weight: .light))
                     .foregroundColor(color)
-                    .frame(width: 48, height: 48)
-                    .background(Color.white.opacity(0.2))
-                    .clipShape(Circle())
+                    .shadow(radius: 2)
+                    .frame(width: 44, height: 44)
+                
+                Text(formatCount(count))
+                    .font(.caption.bold())
+                    .foregroundColor(.white)
+                    .shadow(radius: 1)
+            }
+        }
+    }
+    
+    // Modern share button with curved arrow (matching web)
+    @ViewBuilder
+    private func minimalistShareButton(count: Int?, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                // Custom curved arrow icon path
+                ZStack {
+                    Path { path in
+                        // Box outline
+                        path.move(to: CGPoint(x: 8, y: 16))
+                        path.addLine(to: CGPoint(x: 8, y: 24))
+                        path.addCurve(to: CGPoint(x: 10, y: 26), control1: CGPoint(x: 8, y: 25.1), control2: CGPoint(x: 8.9, y: 26))
+                        path.addLine(to: CGPoint(x: 22, y: 26))
+                        path.addCurve(to: CGPoint(x: 24, y: 24), control1: CGPoint(x: 23.1, y: 26), control2: CGPoint(x: 24, y: 25.1))
+                        path.addLine(to: CGPoint(x: 24, y: 16))
+                        
+                        // Arrow polyline
+                        path.move(to: CGPoint(x: 20, y: 10))
+                        path.addLine(to: CGPoint(x: 16, y: 6))
+                        path.addLine(to: CGPoint(x: 12, y: 10))
+                        
+                        // Vertical line
+                        path.move(to: CGPoint(x: 16, y: 6))
+                        path.addLine(to: CGPoint(x: 16, y: 19))
+                    }
+                    .stroke(Color.white, lineWidth: 1.5)
+                    .frame(width: 32, height: 32)
+                    .shadow(radius: 2)
+                }
+                .frame(width: 44, height: 44)
                 
                 if let count = count {
                     Text(formatCount(count))
                         .font(.caption.bold())
                         .foregroundColor(.white)
+                        .shadow(radius: 1)
                 }
             }
         }
@@ -280,55 +381,61 @@ struct EnhancedVerticalVideoPlayer: View {
     
     @ViewBuilder
     private func seekBarView() -> some View {
-        VStack(spacing: 8) {
-            // Interactive Seek Slider
+        VStack(spacing: 12) {
+            // Interactive Seek Slider with Time Bubble
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
-                    // Track background
+                    // Time bubble that follows thumb (shows while seeking)
+                    if isSeeking {
+                        Text(formatTime(seekTime))
+                            .font(.caption.bold())
+                            .foregroundColor(.black)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.white)
+                            .cornerRadius(8)
+                            .shadow(radius: 4)
+                            .offset(x: (geometry.size.width - 12) * CGFloat(playerManager.progress) - 20, y: -40)
+                    }
+                    
+                    // Track background (white translucent)
                     Rectangle()
                         .fill(Color.white.opacity(0.3))
-                        .frame(height: 2)
-                        .cornerRadius(1)
+                        .frame(height: isSeeking ? 4 : 2)
+                        .cornerRadius(2)
+                        .animation(.easeOut(duration: 0.15), value: isSeeking)
                     
-                    // Progress fill
+                    // Progress fill (white solid)
                     Rectangle()
-                        .fill(Color.red)
-                        .frame(width: geometry.size.width * CGFloat(playerManager.progress), height: 2)
-                        .cornerRadius(1)
+                        .fill(Color.white)
+                        .frame(width: geometry.size.width * CGFloat(playerManager.progress), height: isSeeking ? 4 : 2)
+                        .cornerRadius(2)
+                        .animation(.easeOut(duration: 0.15), value: isSeeking)
                     
-                    // Draggable thumb
+                    // Draggable thumb (white)
                     Circle()
-                        .fill(Color.red)
-                        .frame(width: 12, height: 12)
-                        .shadow(color: .black.opacity(0.4), radius: 3, x: 0, y: 2)
-                        .offset(x: (geometry.size.width - 12) * CGFloat(playerManager.progress))
+                        .fill(Color.white)
+                        .frame(width: isSeeking ? 16 : 8, height: isSeeking ? 16 : 8)
+                        .shadow(color: isSeeking ? .white.opacity(0.3) : .black.opacity(0.3), radius: isSeeking ? 8 : 3, x: 0, y: 2)
+                        .offset(x: (geometry.size.width - (isSeeking ? 16 : 8)) * CGFloat(playerManager.progress))
+                        .animation(.easeOut(duration: 0.15), value: isSeeking)
                         .gesture(
                             DragGesture(minimumDistance: 0)
                                 .onChanged { value in
+                                    isSeeking = true
                                     let newProgress = max(0, min(1, value.location.x / geometry.size.width))
                                     let newTime = playerManager.duration * newProgress
+                                    seekTime = newTime
+                                    // Real-time scrubbing
                                     playerManager.seek(to: newTime)
+                                }
+                                .onEnded { _ in
+                                    isSeeking = false
                                 }
                         )
                 }
             }
-            .frame(height: 12)
-            .padding(.horizontal, 16)
-            
-            // Episode info - 2 lines max
-            VStack(alignment: .leading, spacing: 2) {
-                if let episode = currentEpisode {
-                    Text(episode.title)
-                        .font(.body.bold())
-                        .foregroundColor(.white)
-                        .lineLimit(1)
-                    
-                    Text("\(series?.title ?? "") • S\(episode.seasonNumber)E\(episode.episodeNumber)")
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.8))
-                        .lineLimit(1)
-                }
-            }
+            .frame(height: 40) // Larger touch target
             .padding(.horizontal, 16)
         }
         .padding(.bottom, 4)

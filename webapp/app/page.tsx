@@ -435,7 +435,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="h-screen overflow-hidden bg-black relative">
+    <div className="h-screen-mobile overflow-hidden bg-black relative">
       <VerticalVideoPlayer
         episode={currentEpisode}
         series={currentSeries || undefined}

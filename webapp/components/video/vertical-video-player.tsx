@@ -396,12 +396,13 @@ export function VerticalVideoPlayer({
     : `S${episode.seasonNumber}E${episode.episodeNumber}`;
 
   return (
-    <div className={cn('relative h-full w-full bg-black overflow-hidden', className)}>
+    <div className={cn('relative h-full w-full max-h-full bg-black overflow-hidden', className)} style={{ touchAction: 'none' }}>
       {/* Video Element - No event handlers */}
       <video
         ref={videoRef}
-        className="absolute inset-0 w-full h-full object-contain"
+        className="absolute inset-0 w-full h-full object-cover"
         playsInline
+        webkit-playsinline="true"
       />
 
       {/* Gesture Capture Overlay - Handles all tap/touch interactions */}
@@ -563,15 +564,24 @@ export function VerticalVideoPlayer({
             </span>
           </button>
 
-          {/* Share Button - Minimalist */}
+          {/* Share Button - Modern curved arrow style */}
           <button
             onClick={onShare}
             className="flex flex-col items-center gap-1"
           >
-            <Share2
+            <svg
               className="h-8 w-8 text-white drop-shadow-lg"
-              strokeWidth={1.5}
-            />
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+              <polyline points="16 6 12 2 8 6" />
+              <line x1="12" y1="2" x2="12" y2="15" />
+            </svg>
           </button>
 
           {/* Episode navigation arrows */}

@@ -8,6 +8,15 @@ import { usePathname } from 'next/navigation';
 
 const inter = Inter({ subsets: ['latin'] });
 
+// Viewport configuration for mobile optimization
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover', // iOS notch support
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
