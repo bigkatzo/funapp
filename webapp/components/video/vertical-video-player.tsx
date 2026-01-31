@@ -373,11 +373,11 @@ export function VerticalVideoPlayer({
     seekingRef.current = false;
   };
 
-  const handleSeekBarInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSeekBarInput = (e: React.FormEvent<HTMLInputElement>) => {
     const video = videoRef.current;
     if (!video) return;
     
-    const percentage = parseFloat(e.target.value);
+    const percentage = parseFloat((e.target as HTMLInputElement).value);
     const newTime = (percentage / 100) * video.duration;
     
     // Update states for UI - INCLUDING progress for visual feedback
