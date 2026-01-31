@@ -252,11 +252,16 @@ export function VerticalVideoPlayer({
 
   return (
     <div className={cn('relative h-full w-full bg-black overflow-hidden', className)}>
-      {/* Video Element */}
+      {/* Video Element - No event handlers */}
       <video
         ref={videoRef}
         className="absolute inset-0 w-full h-full object-contain"
         playsInline
+      />
+
+      {/* Gesture Capture Overlay - Handles all tap/touch interactions */}
+      <div
+        className="absolute inset-0 z-10"
         onClick={handleTap}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
@@ -265,15 +270,15 @@ export function VerticalVideoPlayer({
         onMouseLeave={handleTouchEnd}
       />
 
-      {/* Progress Bar - Top */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-white/10 z-40">
+      {/* Progress Bar - Top (non-interactive) */}
+      <div className="absolute top-0 left-0 right-0 h-1 bg-white/10 z-40 pointer-events-none">
         <div
           className="h-full bg-red-600 transition-all duration-100"
           style={{ width: `${progress}%` }}
         />
       </div>
 
-      {/* Seek Animation Overlays */}
+      {/* Seek Animation Overlays (non-interactive) */}
       {showSeekAnimation === 'backward' && (
         <div className="absolute left-0 top-0 bottom-0 w-1/3 flex items-center justify-center pointer-events-none z-30">
           <div className="bg-black/50 backdrop-blur-sm rounded-full p-6 animate-ping">
@@ -294,7 +299,7 @@ export function VerticalVideoPlayer({
         </div>
       )}
 
-      {/* Long Press Speed Indicator */}
+      {/* Long Press Speed Indicator (non-interactive) */}
       {isLongPressing && (
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-30">
           <div className="bg-black/70 backdrop-blur-md rounded-full px-6 py-3 text-white font-bold text-xl">
@@ -303,17 +308,17 @@ export function VerticalVideoPlayer({
         </div>
       )}
 
-      {/* Overlay Controls */}
+      {/* Overlay Controls (with proper pointer events) */}
       <div
         className={cn(
-          'absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/60 transition-opacity duration-300',
+          'absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/60 transition-opacity duration-300 pointer-events-none',
           showControls ? 'opacity-100' : 'opacity-0'
         )}
       >
         {/* Top Bar */}
         <div className="absolute top-0 left-0 right-0 p-4 pt-safe flex items-start justify-between z-40">
           {/* Left: Back button & Series info */}
-          <div className="flex-1">
+          <div className="flex-1 pointer-events-auto">
             {onBackClick && (
               <Button
                 variant="ghost"
@@ -344,7 +349,7 @@ export function VerticalVideoPlayer({
         )}
 
         {/* Right Side: Social Actions */}
-        <div className="absolute right-4 bottom-24 flex flex-col gap-4 z-40">
+        <div className="absolute right-4 bottom-24 flex flex-col gap-4 z-40 pointer-events-auto">
           <button
             onClick={onLike}
             className="flex flex-col items-center gap-1"
@@ -406,9 +411,9 @@ export function VerticalVideoPlayer({
         </div>
 
         {/* Bottom Controls */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 pb-20 z-40">
+        <div className="absolute bottom-0 left-0 right-0 p-4 pb-20 z-40 pointer-events-auto">
           {/* Episode Title & Description */}
-          <div className="mb-4">
+          <div className="mb-4 pointer-events-none">
             <h3 className="text-white font-bold text-lg mb-1">{episode.title}</h3>
             {episode.description && (
               <p className="text-white/80 text-sm line-clamp-2">{episode.description}</p>
@@ -432,15 +437,15 @@ export function VerticalVideoPlayer({
             </Button>
 
             {/* Time */}
-            <span className="text-white text-sm font-medium whitespace-nowrap">
+            <span className="text-white text-sm font-medium whitespace-nowrap pointer-events-none">
               {formatTime(currentTime)} / {formatTime(episode.duration)}
             </span>
 
-            <div className="flex-1" />
+            <div className="flex-1 pointer-events-none" />
 
             {/* Episode counter */}
             {currentPosition && (
-              <span className="text-white/80 text-sm whitespace-nowrap">
+              <span className="text-white/80 text-sm whitespace-nowrap pointer-events-none">
                 {currentPosition.current}/{currentPosition.total}
               </span>
             )}

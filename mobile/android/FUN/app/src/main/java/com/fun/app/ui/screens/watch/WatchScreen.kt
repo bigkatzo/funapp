@@ -20,6 +20,7 @@ import com.fun.app.data.models.PlaylistMode
 import com.fun.app.ui.components.overlays.ContinuePrompt
 import com.fun.app.ui.components.overlays.EpisodeTransition
 import com.fun.app.ui.components.overlays.SwipeMenu
+import com.fun.app.ui.components.video.EnhancedVerticalVideoPlayer
 
 @Composable
 fun WatchScreen(
@@ -52,25 +53,21 @@ fun WatchScreen(
     ) {
         // Video Player
         playlistContext?.let { context ->
-            // TODO: Add enhanced video player component
-            // EnhancedVerticalVideoPlayer(
-            //     context = context,
-            //     series = series,
-            //     onVideoEnd = viewModel::handleVideoEnd,
-            //     onSwipeDown = viewModel::handleSwipeDown,
-            //     onSeriesTitleTap = { /* Navigate to series */ },
-            //     onBackClick = { navController.navigateUp() },
-            //     onNextEpisode = if (context.hasNext) viewModel::handleNextEpisode else null,
-            //     onPrevEpisode = if (context.hasPrevious) viewModel::handlePrevEpisode else null
-            // )
-            
-            // Placeholder
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = Color.White)
-            }
+            EnhancedVerticalVideoPlayer(
+                context = context,
+                series = series,
+                onVideoEnd = viewModel::handleVideoEnd,
+                onSwipeDown = viewModel::handleSwipeDown,
+                onSeriesTitleTap = {
+                    seriesId?.let { id ->
+                        navController.navigate("series/$id")
+                    }
+                },
+                onBackClick = { navController.navigateUp() },
+                onNextEpisode = if (context.hasNext) viewModel::handleNextEpisode else null,
+                onPrevEpisode = if (context.hasPrevious) viewModel::handlePrevEpisode else null,
+                modifier = Modifier.fillMaxSize()
+            )
         }
         
         // Continue Prompt
