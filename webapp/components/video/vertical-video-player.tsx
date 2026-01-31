@@ -464,11 +464,11 @@ export function VerticalVideoPlayer({
               type="range"
               min="0"
               max="100"
-              value={progress}
+              value={isNaN(progress) ? 0 : progress}
               onChange={handleSeekBarChange}
               className="w-full h-1 bg-white/30 rounded-lg appearance-none cursor-pointer seek-slider"
               style={{
-                background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${progress}%, rgba(255,255,255,0.3) ${progress}%, rgba(255,255,255,0.3) 100%)`
+                background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${isNaN(progress) ? 0 : progress}%, rgba(255,255,255,0.3) ${isNaN(progress) ? 0 : progress}%, rgba(255,255,255,0.3) 100%)`
               }}
             />
           </div>
